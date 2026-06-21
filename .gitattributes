@@ -1,0 +1,15 @@
+# Normalise line endings: LF in the repository for all text files.
+* text=auto eol=lf
+
+# Explicit binary types (never normalise).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.duckdb binary
+*.parquet binary
+
+# Lockfile is generated; keep diffs collapsed in review tools.
+uv.lock linguist-generated=true
