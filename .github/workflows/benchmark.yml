@@ -1,0 +1,30 @@
+name: benchmark
+
+# Scheduled estimator-suite run on a fixed snapshot to catch performance and
+# numerical regressions. Estimators arrive in later phases; for
+# now this verifies the environment builds and the (fast) test suite runs.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync environment (locked)
+        run: uv sync --all-extras --frozen
+
+      - name: Run test suite (timed)
+        run: uv run pytest --durations=25

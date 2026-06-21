@@ -1,0 +1,147 @@
+[project]
+name = "causal-impact-lab"
+version = "0.0.0"
+description = "Estimating the causal effect of contractionary US monetary policy shocks on US employment."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12,<3.13"
+authors = [{ name = "Maxime Gourguechon" }]
+keywords = [
+    "econometrics",
+    "causal-inference",
+    "local-projections",
+    "monetary-policy",
+]
+
+# Dependency FLOORS only. Exact versions are fixed by uv.lock (see the contract).
+dependencies = [
+    # Numerics / dataframes / storage
+    "numpy>=2",
+    "scipy>=1.13",
+    "pandas>=2.2",
+    "polars>=1",
+    "duckdb>=1",
+    # Econometrics
+    "statsmodels>=0.14",
+    "linearmodels>=6",
+    "arch>=7",
+    # Causal stack (PyWhy + Bayesian)
+    "econml>=0.15",
+    "dowhy>=0.11",
+    "pymc>=5",
+    "arviz>=0.18",
+    # Data access
+    "httpx>=0.27",
+    "requests>=2.32",
+    "fredapi>=0.5",
+    # Validation / config
+    "pandera>=0.20",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+]
+
+[project.optional-dependencies]
+app = ["streamlit>=1.35"]
+docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.25"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "hypothesis>=6.100",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+    "pandas-stubs>=2.2",
+    "types-requests>=2.32",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cil"]
+
+# ----------------------------------------------------------------------------
+# Ruff (format + lint) -- CI gate
+# ----------------------------------------------------------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "D",   # pydocstyle (numpydoc style)
+    "RUF",
+]
+ignore = [
+    "D105", # missing docstring in magic method
+    "D107", # missing docstring in __init__
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]      # tests need not be numpydoc-documented
+"scripts/**" = ["D"]
+"**/__init__.py" = ["D104"]
+
+# ----------------------------------------------------------------------------
+# mypy (strict) -- CI gate
+# ----------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+# Scientific libraries without complete type stubs.
+module = [
+    "statsmodels.*",
+    "linearmodels.*",
+    "arch.*",
+    "econml.*",
+    "dowhy.*",
+    "pymc.*",
+    "arviz.*",
+    "fredapi.*",
+    "duckdb.*",
+]
+ignore_missing_imports = true
+
+# ----------------------------------------------------------------------------
+# pytest / coverage
+# ----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+markers = [
+    "integration: live external pulls; excluded from the default run (network).",
+    "golden: golden-fixture comparisons (e.g. LP-DiD vs Stata).",
+    "property: hypothesis-based property tests.",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["cil"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

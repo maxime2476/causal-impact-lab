@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environments / tooling caches
+.venv/
+venv/
+.env
+.envrc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# uv
+# NOTE: uv.lock IS committed (reproducible env). Do not ignore it.
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Project data artifacts (raw pulls, caches, DuckDB stores)
+data/
+*.duckdb
+*.duckdb.wal
+*.parquet
+site/
