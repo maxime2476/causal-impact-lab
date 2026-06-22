@@ -34,6 +34,7 @@ dependencies = [
     "httpx>=0.27",
     "requests>=2.32",
     "fredapi>=0.5",
+    "openpyxl>=3.1",
     # Validation / config
     "pandera>=0.20",
     "pydantic>=2.7",
@@ -130,7 +131,7 @@ ignore_missing_imports = true
 # ----------------------------------------------------------------------------
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra --strict-markers --strict-config"
+addopts = "-ra --strict-markers --strict-config -m 'not integration'"
 testpaths = ["tests"]
 markers = [
     "integration: live external pulls; excluded from the default run (network).",
