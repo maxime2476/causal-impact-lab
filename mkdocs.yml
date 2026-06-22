@@ -42,3 +42,4 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Environment: environment.md
+  - Data: data.md

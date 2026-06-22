@@ -33,8 +33,9 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Project data artifacts (raw pulls, caches, DuckDB stores)
-data/
+# Project data artifacts (raw pulls, caches, DuckDB stores).
+# Anchored to the repo root so it does not match the src/cil/data package.
+/data/
 *.duckdb
 *.duckdb.wal
 *.parquet

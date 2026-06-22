@@ -16,6 +16,7 @@ True
 
 from __future__ import annotations
 
+import datetime as dt
 import functools
 from pathlib import Path
 
@@ -90,6 +91,176 @@ class PathsConfig(BaseModel):
     figures_dir: Path = Field(default=_PROJECT_ROOT / "docs" / "figures")
 
 
+class SourceUrls(BaseModel):
+    """Base URLs and direct file locations for external data sources.
+
+    Parameters
+    ----------
+    fred_base
+        FRED/ALFRED REST API base.
+    qcew_area_template
+        QCEW open-data area CSV template; formatted with ``year``, ``qtr``,
+        and ``area`` (e.g. ``"01000"`` for Alabama, ``"US000"`` national).
+    bls_flat_base
+        BLS time-series flat-file root (used for CES-SAE / ``sm`` files).
+    wuxia_xlsx
+        Direct URL of the Atlanta Fed Wu-Xia shadow-rate workbook.
+    brw_csv
+        Direct URL of the Bu-Rogers-Wu shock-series CSV.
+    """
+
+    fred_base: str = "https://api.stlouisfed.org/fred"
+    qcew_area_template: str = (
+        "https://data.bls.gov/cew/data/api/{year}/{qtr}/area/{area}.csv"
+    )
+    bls_flat_base: str = "https://download.bls.gov/pub/time.series"
+    wuxia_xlsx: str = (
+        "https://www.atlantafed.org/-/media/Project/Atlanta/FRBA/Documents/"
+        "datafiles/cqer/research/wu-xia-shadow-federal-funds-rate/WuXiaShadowRate.xlsx"
+    )
+    brw_csv: str = (
+        "https://www.federalreserve.gov/econres/feds/files/brw-shock-series.csv"
+    )
+
+
+class MacroSeries(BaseModel):
+    """FRED/ALFRED series identifiers for national and macro-confounder data.
+
+    Parameters
+    ----------
+    national_employment
+        Total nonfarm payroll employment (the national outcome).
+    cpi, pce_price, industrial_production, unemployment, oil_price
+        Macro confounders. CPI and the PCE price index proxy inflation;
+        industrial production and the unemployment rate proxy real activity /
+        slack; the oil price proxies a common supply shock.
+    fed_funds
+        Effective federal funds rate (monthly average), the conventional policy
+        rate spliced with the Wu-Xia shadow rate at the ZLB.
+    strict_pit
+        Series for which the as-of (real-time vintage) panel is enforced and the
+        point-in-time invariant is tested.
+    """
+
+    national_employment: str = "PAYEMS"
+    cpi: str = "CPIAUCSL"
+    pce_price: str = "PCEPI"
+    industrial_production: str = "INDPRO"
+    unemployment: str = "UNRATE"
+    oil_price: str = "MCOILWTICO"
+    fed_funds: str = "FEDFUNDS"
+    strict_pit: tuple[str, ...] = (
+        "PAYEMS",
+        "CPIAUCSL",
+        "PCEPI",
+        "INDPRO",
+        "UNRATE",
+    )
+
+    @property
+    def all_ids(self) -> tuple[str, ...]:
+        """All distinct FRED series identifiers referenced by this config."""
+        ids = (
+            self.national_employment,
+            self.cpi,
+            self.pce_price,
+            self.industrial_production,
+            self.unemployment,
+            self.oil_price,
+            self.fed_funds,
+        )
+        return tuple(dict.fromkeys(ids))
+
+
+class QcewConfig(BaseModel):
+    """QCEW state-by-supersector extraction parameters.
+
+    Parameters
+    ----------
+    aggregation_level
+        QCEW ``agglvl_code``. ``53`` selects "State, by NAICS Supersector"
+        (~11 supersectors), minimising disclosure suppression relative to finer
+        NAICS levels.
+    ownership_code
+        QCEW ``own_code``. ``0`` selects "Total Covered" employment.
+    coverage_min_fraction
+        Minimum fraction of in-sample months a (state, supersector) cell must be
+        non-suppressed and positive to be retained; cells below this are flagged
+        and dropped. In ``[0, 1]``.
+    api_min_year
+        Earliest year served by the QCEW open-data API. The API exposes only
+        2014 onward; earlier NAICS history exists solely in bulk flat files and
+        is a documented follow-up (see ``docs/data.md``). QCEW ingestion is
+        clamped to start no earlier than this year.
+    """
+
+    aggregation_level: int = 53
+    ownership_code: int = 0
+    coverage_min_fraction: float = Field(default=0.95, ge=0.0, le=1.0)
+    api_min_year: int = 2014
+
+
+class ZlbWindow(BaseModel):
+    """A zero-lower-bound window over which the shadow rate is spliced in.
+
+    Parameters
+    ----------
+    start, end
+        Inclusive month bounds (first day of month) of the ZLB window.
+    """
+
+    start: dt.date
+    end: dt.date
+
+
+class SampleConfig(BaseModel):
+    """Sample window and structural-break dates.
+
+    Parameters
+    ----------
+    start, end
+        Inclusive bounds of the analysis sample (first day of month). Ingestion
+        pulls the full available history; windowing is applied downstream.
+    zlb_windows
+        Windows over which the Wu-Xia shadow rate replaces the EFFR.
+    """
+
+    start: dt.date = dt.date(1994, 1, 1)
+    end: dt.date = dt.date(2020, 12, 1)
+    zlb_windows: tuple[ZlbWindow, ...] = (
+        ZlbWindow(start=dt.date(2008, 12, 1), end=dt.date(2015, 12, 1)),
+        ZlbWindow(start=dt.date(2020, 3, 1), end=dt.date(2022, 2, 1)),
+    )
+
+
+class DataConfig(BaseModel):
+    """Data-layer configuration (sources, series, sample, QCEW parameters).
+
+    Parameters
+    ----------
+    urls
+        External source locations.
+    series
+        FRED/ALFRED series identifiers.
+    qcew
+        QCEW extraction parameters.
+    sample
+        Sample window and ZLB splice windows.
+    contact_email
+        Contact address sent in the ``User-Agent`` for BLS requests, per BLS
+        access policy.
+    request_timeout_seconds
+        Per-request timeout for external pulls.
+    """
+
+    urls: SourceUrls = Field(default_factory=SourceUrls)
+    series: MacroSeries = Field(default_factory=MacroSeries)
+    qcew: QcewConfig = Field(default_factory=QcewConfig)
+    sample: SampleConfig = Field(default_factory=SampleConfig)
+    contact_email: str = "research@example.com"
+    request_timeout_seconds: float = Field(default=60.0, gt=0.0)
+
+
 class Settings(BaseSettings):
     """Top-level project settings.
 
@@ -106,6 +277,8 @@ class Settings(BaseSettings):
         Inference and multiple-testing parameters.
     paths
         Filesystem locations.
+    data
+        Data-layer configuration (sources, series, sample, QCEW parameters).
     """
 
     model_config = SettingsConfigDict(
@@ -120,6 +293,7 @@ class Settings(BaseSettings):
     horizons: HorizonConfig = Field(default_factory=HorizonConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
+    data: DataConfig = Field(default_factory=DataConfig)
 
     @field_validator("horizons")
     @classmethod
