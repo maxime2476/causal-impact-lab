@@ -124,6 +124,7 @@ module = [
     "fredapi.*",
     "duckdb.*",
     "networkx.*",
+    "scipy.*",
 ]
 ignore_missing_imports = true
 

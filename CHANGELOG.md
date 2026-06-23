@@ -33,3 +33,9 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   benchmark, with results stored and ADR-0004 recording the headline-shock choice.
 - Secret redaction in HTTP error handling so the FRED API key never appears in
   raised messages.
+- Shift-share interest-rate exposure (estimated semi-elasticity + documented
+  duration proxy), the headline interacted panel local projection with
+  event-study leads, Driscoll-Kraay and wild-cluster-bootstrap inference, BH-FDR
+  adjustment, an LP-DiD port (validated by TWFE equivalence) with a
+  Goodman-Bacon diagnostic, and ADR-0005.
+- `docs/results.md` reporting the preliminary headline as a pre-registered null.
