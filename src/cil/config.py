@@ -261,6 +261,37 @@ class DataConfig(BaseModel):
     request_timeout_seconds: float = Field(default=60.0, gt=0.0)
 
 
+class ShocksConfig(BaseModel):
+    """Monetary-shock identification parameters.
+
+    Parameters
+    ----------
+    equity_series_id
+        FRED series for the broad-equity gauge used in the information-effect
+        test (NASDAQ Composite as a long-history broad proxy).
+    rr_lags
+        Number of monthly lags of the real-time information set included in the
+        Romer-Romer orthogonalization regression.
+    predictability_lags
+        Number of lags of predictors used in the predictability (Bauer-Swanson)
+        test.
+    svar_lags
+        Lag order of the reduced-form VAR underlying the proxy-SVAR.
+    weak_iv_f_threshold
+        First-stage F below which the external instrument is flagged weak
+        (Montiel Olea-Pflueger effective-F guidance; ~10 rule of thumb).
+    instrument
+        Which series instruments the policy equation in the proxy-SVAR.
+    """
+
+    equity_series_id: str = "NASDAQCOM"
+    rr_lags: int = Field(default=2, ge=0)
+    predictability_lags: int = Field(default=3, ge=1)
+    svar_lags: int = Field(default=12, ge=1)
+    weak_iv_f_threshold: float = Field(default=10.0, gt=0.0)
+    instrument: str = "brw_monthly"
+
+
 class Settings(BaseSettings):
     """Top-level project settings.
 
@@ -279,6 +310,8 @@ class Settings(BaseSettings):
         Filesystem locations.
     data
         Data-layer configuration (sources, series, sample, QCEW parameters).
+    shocks
+        Monetary-shock identification parameters.
     """
 
     model_config = SettingsConfigDict(
@@ -294,6 +327,7 @@ class Settings(BaseSettings):
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
     data: DataConfig = Field(default_factory=DataConfig)
+    shocks: ShocksConfig = Field(default_factory=ShocksConfig)
 
     @field_validator("horizons")
     @classmethod

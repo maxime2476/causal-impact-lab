@@ -8,6 +8,7 @@ caller's concern.
 
 from __future__ import annotations
 
+import re
 import time
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,12 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+_SECRET_PARAM = re.compile(r"(api_key=)[^&\s]+", re.IGNORECASE)
+
+
+def redact_secrets(text: str) -> str:
+    """Return *text* with any ``api_key=...`` query value masked."""
+    return _SECRET_PARAM.sub(r"\1REDACTED", text)
 
 
 def build_user_agent(contact_email: str) -> str:
@@ -87,17 +94,14 @@ def fetch(
 
     Raises
     ------
-    httpx.HTTPStatusError
+    RuntimeError
         If a non-retryable error status is returned, or attempts are exhausted.
-    httpx.TransportError
-        If transport-level failures persist across all attempts.
+        The message is scrubbed of any API key before being raised.
     """
     last_exc: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         try:
             response = client.get(url, params=params)
-            if response.status_code in _RETRYABLE_STATUS:
-                response.raise_for_status()
             response.raise_for_status()
             return response
         except (httpx.HTTPStatusError, httpx.TransportError) as exc:
@@ -107,7 +111,7 @@ def fetch(
                 status in _RETRYABLE_STATUS
             )
             if not retryable or attempt == max_attempts:
-                raise
+                raise RuntimeError(redact_secrets(str(exc))) from None
             time.sleep(backoff_seconds ** (attempt - 1))
     # Unreachable: the loop either returns or raises.
-    raise RuntimeError("fetch exhausted retries") from last_exc
+    raise RuntimeError(redact_secrets(str(last_exc)))

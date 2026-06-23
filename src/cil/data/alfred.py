@@ -39,8 +39,10 @@ def fetch_raw_series(
     fred_base: str,
     api_key: str,
     series_id: str,
+    *,
+    pit: bool = True,
 ) -> tuple[bytes, str, dict[str, str]]:
-    """Fetch the full real-time observation archive for one series.
+    """Fetch the observation archive for one series.
 
     Parameters
     ----------
@@ -52,23 +54,26 @@ def fetch_raw_series(
         FRED/ALFRED API key (sent as a query parameter, never recorded).
     series_id
         FRED series identifier.
+    pit
+        If ``True`` (default), request the full real-time vintage archive. If
+        ``False``, request only the latest vintage -- appropriate for
+        as-published series without a usable vintage archive (e.g. market
+        indices), for which the wide real-time range is rejected.
 
     Returns
     -------
     content : bytes
         Raw JSON payload.
     record_url : str
-        The request URL with the API key redacted, for provenance.
+        The request URL (without the API key), for provenance.
     record_params : dict of str to str
         Non-secret request parameters, for provenance.
     """
     url = f"{fred_base}/series/observations"
-    record_params = {
-        "series_id": series_id,
-        "realtime_start": _REALTIME_MIN,
-        "realtime_end": _REALTIME_MAX,
-        "file_type": "json",
-    }
+    record_params = {"series_id": series_id, "file_type": "json"}
+    if pit:
+        record_params["realtime_start"] = _REALTIME_MIN
+        record_params["realtime_end"] = _REALTIME_MAX
     params: dict[str, str | int] = {**record_params, "api_key": api_key}
     response = http.fetch(client, url, params=params)
     return response.content, url, record_params
@@ -134,6 +139,35 @@ def latest_from_pit(pit: pl.DataFrame) -> pl.DataFrame:
         .sort(["series_id", "reference_date"])
     )
     return validate(MACRO_CURRENT_SCHEMA, latest)
+
+
+def first_release_from_pit(pit: pl.DataFrame) -> pl.DataFrame:
+    """Collapse a point-in-time frame to each observation's first release.
+
+    The first-release value (earliest vintage per reference period) is the
+    canonical real-time series: what was known when the period was first
+    published, free of later revisions.
+
+    Parameters
+    ----------
+    pit
+        A frame conforming to
+        :data:`cil.data.schemas.MACRO_PIT_SCHEMA`.
+
+    Returns
+    -------
+    polars.DataFrame
+        The first-release series, validated against
+        :data:`cil.data.schemas.MACRO_CURRENT_SCHEMA`.
+    """
+    first = (
+        pit.sort(["series_id", "reference_date", "vintage_date"])
+        .group_by(["series_id", "reference_date"])
+        .first()
+        .select(["series_id", "reference_date", "value"])
+        .sort(["series_id", "reference_date"])
+    )
+    return validate(MACRO_CURRENT_SCHEMA, first)
 
 
 def as_of(pit: pl.DataFrame, vintage: dt.date) -> pl.DataFrame:
