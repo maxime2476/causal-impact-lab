@@ -39,3 +39,7 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   adjustment, an LP-DiD port (validated by TWFE equivalence) with a
   Goodman-Bacon diagnostic, and ADR-0005.
 - `docs/results.md` reporting the preliminary headline as a pre-registered null.
+- Aggregate complement: time-series local projection IRF (HAC) and an LP-IV
+  proxy-SVAR IRF with first-stage F and Anderson-Rubin weak-instrument-robust
+  intervals, with honest assumption-dependence framing in `results.md` and
+  ADR-0006.

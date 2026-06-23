@@ -37,6 +37,38 @@ These are addressed by later phases (aggregate IRF, DML heterogeneity, Bayesian
 partial pooling, and the COVID/break robustness). The headline number stands as
 reported until then.
 
+## Aggregate dynamic effect (Phase 5, complement)
+
+The aggregate IRF is the **assumption-dependent complement** to the headline
+relative effect: it requires the shock to be exogenous to the aggregate state of
+the economy. It is reported separately and never as "the" answer.
+
+**Time-series LP** (national log employment on the BRW shock, full 1994-2020
+sample, Newey-West SEs): the response is positive on impact and turns negative
+over the medium run, consistent with a contractionary shock reducing employment.
+
+| Horizon | theta (employment, % per unit shock) | p-value |
+|---|---|---|
+| h = 0 | +2.5 | 0.12 |
+| h = 12 | -6.6 | 0.10 |
+| h = 24 | -6.5 | 0.12 |
+
+The medium-run effects have the expected sign but are only marginally
+significant.
+
+**LP-IV proxy-SVAR** (employment response to a +1pp policy-rate increase,
+instrumented by BRW): point estimates are negative at the medium run
+(theta_12 ~ -4), but the **first stage is weak** (robust F ~ 4-5, below any
+threshold), so the Anderson-Rubin weak-instrument-robust intervals are very wide
+(e.g. h = 12 ~ [-30, +1]). The rate-scaled IRF is therefore **not reliably
+identified** on this sample; this is reported, not hidden, and follows directly
+from the weak BRW first stage documented in ADR-0004.
+
+**Bottom line:** the aggregate complement is *suggestive* of a contractionary
+employment decline at the medium run but is imprecise, and the structural
+rate-response is weakly identified. It does not overturn or substitute for the
+headline relative design.
+
 ## Method notes
 
 - Inference: Driscoll-Kraay standard errors (cross-sectional + serial robust),
