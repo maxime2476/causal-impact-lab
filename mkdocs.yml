@@ -43,3 +43,5 @@ nav:
   - Home: index.md
   - Environment: environment.md
   - Data: data.md
+  - Methods: methods.md
+  - Analysis plan: analysis_plan.md

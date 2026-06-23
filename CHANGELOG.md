@@ -21,3 +21,8 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Schema contracts (`pandera`) at every dataset boundary, a DuckDB store with a
   provenance ledger, and an end-to-end ingestion pipeline.
 - `docs/data.md` and ADR-0002 documenting the scoped point-in-time policy.
+- Causal DAG (`cil.dag`) for the headline design, DoWhy identification yielding
+  the backdoor set, a refuter battery, and an assumptions registry linking each
+  identifying assumption to its probe.
+- Frozen `docs/analysis_plan.md` (the falsifiable claim, sign, horizons, spec
+  list, and falsification conditions), `docs/methods.md`, and ADR-0003.
