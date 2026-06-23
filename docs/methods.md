@@ -68,6 +68,43 @@ correlates). The mapping to the estimator is deliberate:
 | aggregate conditions, shock (aggregate effect) | **time fixed effects** `δ_t` |
 | exposure, predetermined cell trend | **unit fixed effects** `γ_i` + lagged controls |
 
+## Monetary shocks (three series, triangulated)
+
+Three monetary-shock series are built and compared (`cil.shocks`):
+
+1. **In-house Romer-Romer orthogonalization** (`rr_orthogonalization`): the
+   monthly change in the policy rate regressed on the Fed's real-time information
+   set (first-release ALFRED vintages: real-time inflation, IP growth,
+   unemployment and lags, plus the lagged rate). The residual is the shock. The
+   real-time vintages stand in for the Greenbook forecasts used by Romer-Romer
+   (2004) — a reproducible public-data proxy.
+2. **Proxy-SVAR external instrument** (`proxy_svar`): a reduced-form VAR whose
+   policy-equation residual is instrumented by a borrowed high-frequency series
+   (the BRW shock); the first-stage strength is reported with a robust effective
+   F and a weak-instrument flag. (Intraday tick data is not freely reproducible,
+   so the instrument is borrowed; the SVAR is ours.)
+3. **Published benchmark** — Bu-Rogers-Wu (`brw_shocks`, ingested in the data
+   layer): spans pre/post-2008 and is documented as largely unpredictable.
+
+Diagnostics reported (`info_effect`, `predictability`, `compare`):
+
+- **Information-effect test** (Jarocinski-Karadi, monthly proxy): classify each
+  surprise as policy vs. information by the sign co-movement of the shock with
+  broad equity returns; report the contamination share. The monthly proxy
+  overstates contamination relative to the high-frequency test.
+- **Predictability test** (Bauer-Swanson): regress the shock on lagged real-time
+  predictors; report R-squared and the joint F p-value. A clean shock is
+  unpredictable.
+- **Cross-correlation** of the three series.
+
+Findings on the real sample (1994–2020 where available; see `shock_diagnostics`):
+the in-house RR series correlates only weakly with BRW (~0.09), the BRW series
+shows modest but significant predictability from the real-time information set
+(p ≈ 0.02, R² ≈ 0.08 — consistent with Bauer-Swanson), and the proxy-SVAR first
+stage is **weak** in the monthly effective-funds-rate configuration (robust
+F ≈ 0.7), which is reported, not hidden. The headline-shock choice is recorded
+in ADR-0004.
+
 ## Assumptions registry
 
 `cil.dag.assumptions` is the single source of truth linking each identifying

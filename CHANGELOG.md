@@ -26,3 +26,10 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   identifying assumption to its probe.
 - Frozen `docs/analysis_plan.md` (the falsifiable claim, sign, horizons, spec
   list, and falsification conditions), `docs/methods.md`, and ADR-0003.
+- Monetary shocks (`cil.shocks`): in-house Romer-Romer orthogonalization on
+  real-time vintages, a proxy-SVAR external-instrument first stage with a
+  weak-instrument flag, information-effect (Jarocinski-Karadi monthly proxy) and
+  predictability (Bauer-Swanson) tests, and cross-correlation against the BRW
+  benchmark, with results stored and ADR-0004 recording the headline-shock choice.
+- Secret redaction in HTTP error handling so the FRED API key never appears in
+  raised messages.
