@@ -69,6 +69,30 @@ employment decline at the medium run but is imprecise, and the structural
 rate-response is weakly identified. It does not overturn or substitute for the
 headline relative design.
 
+## Heterogeneity via DML (Phase 6)
+
+Double/debiased ML (EconML) with **purged time-blocked cross-fitting** estimates
+the average and exposure-heterogeneous effect of the interaction. The placebo
+(treatment permuted across time) collapses to ~0 at every horizon, so the
+estimates are not spurious -- but the effect itself is **not robust**:
+
+| Horizon | LinearDML ATE (95% CI) | CausalForest ATE | placebo |
+|---|---|---|---|
+| h = 0 | -0.15 ([-0.25, -0.06]) | -1.40 | +0.03 |
+| h = 12 | +0.07 ([+0.02, +0.13]) | -0.61 | -0.00 |
+| h = 24 | +0.17 ([+0.09, +0.26]) | +0.09 | -0.02 |
+
+- The LinearDML effect is significantly negative on impact (the expected sign)
+  but **flips to significantly positive** at h = 12 and h = 24.
+- LinearDML and CausalForestDML **disagree sharply** (e.g. -0.15 vs -1.40 at
+  h = 0), indicating instability / unmodelled nonlinearity on the short sample.
+- Placebos are ~0 throughout: the refutation passes (no spurious effect), but the
+  sign instability and estimator disagreement mean the heterogeneity evidence
+  **does not support** the headline claim either.
+
+This corroborates the pre-registered null: across the panel-LP and DML estimators
+the relative effect is not robustly negative on the 2014-2020 sample.
+
 ## Method notes
 
 - Inference: Driscoll-Kraay standard errors (cross-sectional + serial robust),

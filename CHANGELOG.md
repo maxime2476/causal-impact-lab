@@ -43,3 +43,6 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   proxy-SVAR IRF with first-stage F and Anderson-Rubin weak-instrument-robust
   intervals, with honest assumption-dependence framing in `results.md` and
   ADR-0006.
+- DML heterogeneity: a purged/embargoed time-blocked cross-fitting splitter
+  (with no-leakage tests), EconML LinearDML and CausalForestDML CATE estimation,
+  a placebo refutation, and ADR-0007.
