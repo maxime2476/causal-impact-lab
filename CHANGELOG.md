@@ -46,3 +46,7 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - DML heterogeneity: a purged/embargoed time-blocked cross-fitting splitter
   (with no-leakage tests), EconML LinearDML and CausalForestDML CATE estimation,
   a placebo refutation, and ADR-0007.
+- Bayesian pillar: a PyMC hierarchical partial-pooling local projection
+  (two-way FE absorbed, non-centred), posterior IRFs with ArviZ convergence
+  diagnostics, prior-sensitivity analysis, posterior predictive checks, a
+  frequentist-vs-Bayesian comparison, and ADR-0008.

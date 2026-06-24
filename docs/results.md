@@ -93,6 +93,31 @@ estimates are not spurious -- but the effect itself is **not robust**:
 This corroborates the pre-registered null: across the panel-LP and DML estimators
 the relative effect is not robustly negative on the 2014-2020 sample.
 
+## Bayesian hierarchical LP (Phase 7)
+
+A PyMC partial-pooling LP (supersector responses shrunk toward a population mean,
+two-way FE absorbed) provides a Bayesian read with full posterior uncertainty.
+All fits converged (max R-hat = 1.00); the posterior predictive matches the
+outcome dispersion (sigma ratio ~ 1.0); and the population IRF is robust to the
+prior (mu_beta spread ~ 0.06 across prior SDs {0.5, 1, 2}).
+
+| Horizon | Bayesian mu_beta (94% HDI) | Frequentist beta_h |
+|---|---|---|
+| h = 0 | -0.01 ([-1.80, +1.86]) | -0.11 |
+| h = 12 | +0.03 ([-2.03, +1.63]) | +0.19 |
+| h = 24 | +0.01 ([-1.99, +1.74]) | +0.10 |
+
+- The Bayesian population IRF is **centred near zero with very wide credible
+  intervals** at every horizon -- no robust relative effect.
+- The posterior means are **shrunk versions of the frequentist estimates** (same
+  signs, smaller magnitudes); between-sector heterogeneity ``tau`` is modest
+  (0.13-0.35).
+
+**Triangulation:** the frequentist panel-LP, the DML estimators, and the Bayesian
+hierarchical LP **agree** -- the relative effect is not robustly identified on the
+2014-2020 sample. The agreement across very different inference paradigms
+strengthens the pre-registered null.
+
 ## Method notes
 
 - Inference: Driscoll-Kraay standard errors (cross-sectional + serial robust),
