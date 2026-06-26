@@ -50,3 +50,7 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (two-way FE absorbed, non-centred), posterior IRFs with ArviZ convergence
   diagnostics, prior-sensitivity analysis, posterior predictive checks, a
   frequentist-vs-Bayesian comparison, and ADR-0008.
+- Robustness suite: specification curve (shock x exposure x lags x COVID) with
+  BH-FDR, placebo/permutation tests, Bai-Perron breaks (`ruptures`), COVID
+  handling (exclusion + Auerbach-Gorodnichenko state-dependent LP), a simulated
+  QCEW revision bound, and ADR-0009.

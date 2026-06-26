@@ -118,6 +118,44 @@ hierarchical LP **agree** -- the relative effect is not robustly identified on t
 2014-2020 sample. The agreement across very different inference paradigms
 strengthens the pre-registered null.
 
+## Robustness (Phase 8)
+
+**Specification curve** (24 specs: shock x exposure x lags x COVID handling), at
+the primary decision horizons:
+
+| Horizon | share negative | share sig. negative (BH<0.10) | median beta |
+|---|---|---|---|
+| h = 12 | 25% | 0% | +0.015 |
+| h = 24 | 42% | 12.5% | +0.015 |
+
+The headline-supporting (negative) sign is a **minority** of specifications and
+is significant in essentially none -- the relative effect is **not robust**.
+
+**Placebo / permutation** (h = 12): permuting the shock across time gives a clean
+null (p = 0.17; placebo mean ~ 0); permuting exposure flags the (wrong-signed)
+estimate as somewhat extreme (p = 0.04). No evidence of a robust negative effect.
+
+**Structural breaks** (Bai-Perron on national employment growth): breaks around
+the WWII demobilization and, recently, 2019, **2020-05 (COVID)**, and 2021 -- the
+pandemic is the dominant recent break.
+
+**COVID / state-dependence** (Auerbach-Gorodnichenko aggregate LP): the
+**expansion-state** response is negative at the medium run (theta_12 = -3.0),
+the expected contractionary sign, while the **recession-state** response is
+positive (theta_12 = +5.3), reflecting the COVID-era collapse in which employment
+and the shock move atypically. The expected effect is visible once the recession/
+COVID state is separated.
+
+**QCEW revision bound** (simulated): the headline coefficient is essentially
+unchanged under simulated revisions of the documented magnitude
+(beta in [+0.187, +0.190] around +0.189) -- revision-induced bias is negligible.
+
+**Overall:** every robustness lens agrees with the headline -- the relative
+effect is not robustly identified on the 2014-2020 sample. The one suggestive
+signal (expansion-state aggregate decline) is consistent with a contractionary
+effect but is assumption-dependent and outside the cleanly-identified relative
+design.
+
 ## Method notes
 
 - Inference: Driscoll-Kraay standard errors (cross-sectional + serial robust),

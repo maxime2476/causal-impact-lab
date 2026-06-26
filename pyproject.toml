@@ -25,6 +25,7 @@ dependencies = [
     "statsmodels>=0.14",
     "linearmodels>=6",
     "arch>=7",
+    "ruptures>=1.1",
     # Causal stack (PyWhy + Bayesian)
     "econml>=0.15",
     "dowhy>=0.11",
@@ -126,6 +127,7 @@ module = [
     "networkx.*",
     "scipy.*",
     "sklearn.*",
+    "ruptures.*",
 ]
 ignore_missing_imports = true
 
