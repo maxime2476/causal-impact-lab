@@ -1,6 +1,6 @@
 [project]
 name = "causal-impact-lab"
-version = "0.0.0"
+version = "0.1.0"
 description = "Estimating the causal effect of contractionary US monetary policy shocks on US employment."
 readme = "README.md"
 license = { file = "LICENSE" }
