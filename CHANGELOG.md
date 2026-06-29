@@ -4,7 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project aims to
 adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-06-30
+
+First release. Estimates the causal effect of contractionary US monetary policy
+shocks on US employment, end to end on real data, with intellectual honesty as
+the deliverable. The pre-registered headline (relative) effect is reported as a
+**null**: across the panel-LP, LP-DiD, DML, and Bayesian estimators the relative
+employment response is not robustly negative and significant on the 2014-2020
+sample, and the specification curve, placebo tests, and prior sensitivity concur.
+The aggregate complement is suggestive but assumption-dependent and weakly
+identified. Interactive app:
+<https://huggingface.co/spaces/maxime2476/causal-impact-lab>.
 
 ### Added
 
