@@ -4,6 +4,8 @@ Estimating the causal effect of contractionary US monetary policy shocks on US
 employment. The goal is an honest answer, not a headline number: null and
 imprecise results are reported as prominently as positive ones.
 
+**Live app:** <https://huggingface.co/spaces/maxime2476/causal-impact-lab>
+
 ## What this measures
 
 Two estimands, in a deliberate hierarchy:
