@@ -13,6 +13,8 @@ Two estimands, in an explicit hierarchy:
    response of national employment to an identified shock, reported separately
    with its identifying assumptions stated and stress-tested.
 
+**Interactive app:** <https://huggingface.co/spaces/maxime2476/causal-impact-lab>
+
 ## Status
 
 The project is built phase by phase. This documentation grows with the work:

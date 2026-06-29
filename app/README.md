@@ -3,9 +3,8 @@ title: Causal Impact Lab
 emoji: 📉
 colorFrom: indigo
 colorTo: blue
-sdk: streamlit
-sdk_version: 1.58.0
-app_file: main.py
+sdk: docker
+app_port: 7860
 pinned: false
 license: mit
 ---
