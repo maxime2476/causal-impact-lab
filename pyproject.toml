@@ -43,7 +43,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-app = ["streamlit>=1.35"]
+app = ["streamlit>=1.35", "plotly>=5.22"]
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.25"]
 
 [dependency-groups]
@@ -56,6 +56,7 @@ dev = [
     "pre-commit>=3.7",
     "pandas-stubs>=2.2",
     "types-requests>=2.32",
+    "huggingface-hub>=0.24",
 ]
 
 [build-system]
@@ -96,6 +97,7 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]      # tests need not be numpydoc-documented
 "scripts/**" = ["D"]
+"app/**" = ["D"]        # the Streamlit UI script is not a documented API
 "**/__init__.py" = ["D104"]
 
 # ----------------------------------------------------------------------------

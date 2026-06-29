@@ -4,6 +4,29 @@ This page reports results honestly, including nulls and imprecise estimates, as
 prominently as positive findings. It grows phase by phase; numbers are
 regenerable with `uv run python -m cil.estimators.build`.
 
+## Bottom line
+
+**The pre-registered headline claim is not supported on the available sample.**
+Across four estimators -- the interacted panel local projection, the LP-DiD
+machinery, double/debiased ML, and a Bayesian hierarchical LP -- the relative
+employment response to interest-rate exposure after a contractionary shock is
+**not robustly negative and significant** at the decision horizons (h = 12, 24),
+and the specification curve, placebo tests, and prior-sensitivity analysis all
+concur. A precisely-stated null is the finding.
+
+The aggregate complement is *suggestive* of a medium-run contractionary
+employment decline (clearer once the recession/COVID state is separated), but it
+is assumption-dependent and weakly identified (a weak external instrument), so it
+neither rescues nor substitutes for the cleanly-identified relative design.
+
+The most important caveat is data coverage: the QCEW open-data API limits the
+cross-sectional panel to **2014-2020**, a short window dominated by a single
+tightening cycle and the pandemic, with exposure variation across only 11
+supersectors. The pre-2014 bulk-file extension (documented in ADR-0002) is the
+clearest path to more power. The claim, sign, horizons, and falsification
+conditions were frozen before estimation and were **not** revised to fit any of
+this.
+
 ## Headline relative effect (Phase 4, preliminary)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline
