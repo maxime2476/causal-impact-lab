@@ -202,9 +202,9 @@ class QcewConfig(BaseModel):
         reconstructed back to 1990). Extends history before ``api_min_year``.
     """
 
-    aggregation_level: int = 53
+    aggregation_level: int = 55
     ownership_code: int = 0
-    coverage_min_fraction: float = Field(default=0.95, ge=0.0, le=1.0)
+    coverage_min_fraction: float = Field(default=0.90, ge=0.0, le=1.0)
     api_min_year: int = 2014
     bulk_min_year: int = 1990
 

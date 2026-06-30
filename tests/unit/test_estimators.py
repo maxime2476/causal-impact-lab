@@ -143,3 +143,19 @@ def test_state_exposure_weights_shares() -> None:
     e01 = e_s.filter(pl.col("state_fips") == "01")["exposure"][0]
     e02 = e_s.filter(pl.col("state_fips") == "02")["exposure"][0]
     assert e01 > e02
+
+
+def test_duration_proxy_for_codes_maps_supersector_and_3digit() -> None:
+    out = ss.duration_proxy_for_codes(["1013", "331", "236", "999"])
+    mapping = dict(
+        zip(
+            out["supersector_code"].to_list(),
+            out["sensitivity"].to_list(),
+            strict=True,
+        )
+    )
+    # 331 (manufacturing) -> 1013; 236 (construction) -> 1012.
+    assert mapping["1013"] == ss.DURATION_PROXY["1013"]
+    assert mapping["331"] == ss.DURATION_PROXY["1013"]
+    assert mapping["236"] == ss.DURATION_PROXY["1012"]
+    assert "999" not in mapping  # unmapped code omitted

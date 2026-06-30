@@ -27,7 +27,31 @@ clearest path to more power. The claim, sign, horizons, and falsification
 conditions were frozen before estimation and were **not** revised to fit any of
 this.
 
-## Headline relative effect (Phase 4, preliminary)
+## Update — Tier 0: extended 3-digit panel (1994–2020)
+
+Post-v0.1.0, the cell panel was extended back to 1994 (QCEW bulk flat files) and
+refined to **NAICS 3-digit** (~4,566 state × sector cells vs 547 supersector
+cells; see ADR-0010/0011). The headline interacted panel LP on this larger,
+finer panel is **markedly more credible**, though still a null in significance:
+
+| Horizon | beta_h (3-digit, 1994–2020) | BH p | vs. registered (supersector, 2014–2020) |
+|---|---|---|---|
+| h = 0 | **-0.025** | 0.48 | -0.11 |
+| h = 12 | **-0.021** | 0.77 | +0.19 (wrong sign) |
+| h = 24 | **-0.012** | 0.83 | +0.10 (wrong sign) |
+
+- **All 25 response horizons are now negative** (the expected sign), versus
+  wrong-signed positives in the registered window.
+- The **event-study leads are clean** (max |t| ≈ 1.3, none significant) — the
+  marginal pre-trend that flagged the registered design is gone.
+- Magnitudes remain small and **not BH-significant**: a correctly-signed,
+  well-behaved **null**, reported as such.
+
+This is a deliberate, disclosed deviation from the frozen plan (supersector →
+3-digit, ADR-0011); the registered supersector result below stands as the
+pre-registered benchmark and was not edited to fit this.
+
+## Headline relative effect (Phase 4, preliminary; pre-registered benchmark)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline
 shock, estimated shift-share exposure) on the 2014-2020 state-by-supersector

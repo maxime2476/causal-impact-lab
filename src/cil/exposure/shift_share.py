@@ -122,6 +122,36 @@ def estimate_sigma_semielasticity(
     return pl.DataFrame(rows).sort("supersector_code")
 
 
+#: NAICS 2-digit sector prefix -> QCEW supersector code (duration proxy at
+#: finer NAICS levels).
+NAICS2_TO_SUPERSECTOR: dict[str, str] = {
+    "11": "1011",
+    "21": "1011",
+    "23": "1012",
+    "31": "1013",
+    "32": "1013",
+    "33": "1013",
+    "22": "1021",
+    "42": "1021",
+    "44": "1021",
+    "45": "1021",
+    "48": "1021",
+    "49": "1021",
+    "51": "1022",
+    "52": "1023",
+    "53": "1023",
+    "54": "1024",
+    "55": "1024",
+    "56": "1024",
+    "61": "1025",
+    "62": "1025",
+    "71": "1026",
+    "72": "1026",
+    "81": "1027",
+    "92": "1028",
+}
+
+
 def duration_proxy_sigma() -> pl.DataFrame:
     """Return the documented duration/credit sensitivity proxy per supersector.
 
@@ -136,6 +166,38 @@ def duration_proxy_sigma() -> pl.DataFrame:
             "sensitivity": list(DURATION_PROXY.values()),
         }
     ).sort("supersector_code")
+
+
+def duration_proxy_for_codes(codes: list[str]) -> pl.DataFrame:
+    """Map sector codes (supersector or finer NAICS) to the duration proxy.
+
+    A supersector code (e.g. ``"1013"``) maps directly; a finer NAICS code
+    (e.g. 3-digit ``"331"``) maps via its 2-digit prefix to a supersector, then
+    to that supersector's proxy value.
+
+    Parameters
+    ----------
+    codes
+        Distinct sector codes present in the panel.
+
+    Returns
+    -------
+    polars.DataFrame
+        Columns ``supersector_code`` (the input code) and ``sensitivity``;
+        codes with no mapping are omitted.
+    """
+    rows: list[dict[str, float | str]] = []
+    for code in sorted(set(codes)):
+        if code in DURATION_PROXY:
+            rows.append({"supersector_code": code, "sensitivity": DURATION_PROXY[code]})
+        elif code[:2] in NAICS2_TO_SUPERSECTOR:
+            rows.append(
+                {
+                    "supersector_code": code,
+                    "sensitivity": DURATION_PROXY[NAICS2_TO_SUPERSECTOR[code[:2]]],
+                }
+            )
+    return pl.DataFrame(rows)
 
 
 def _standardize(frame: pl.DataFrame, col: str) -> pl.DataFrame:

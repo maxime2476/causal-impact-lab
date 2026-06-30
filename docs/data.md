@@ -44,10 +44,13 @@ The policy is **scoped, not uniform** (and is stated as such — see ADR-0002).
 
 ## QCEW details
 
-- **Granularity.** State × NAICS *supersector* (`agglvl_code == 53`, ~11
-  supersectors) minimises disclosure suppression relative to finer NAICS levels.
-  The eleven supersectors span Natural Resources & Mining through Public
-  Administration.
+- **Granularity.** The headline panel is now built at **NAICS 3-digit**
+  (`agglvl_code == 55`, ~100 sectors) to maximise cross-sectional exposure
+  variation (~4,566 state × sector cells). The supersector level
+  (`agglvl_code == 53`, 11 sectors) remains fully reproducible and is reported as
+  the pre-registered benchmark (see ADR-0011). Finer NAICS carries heavier
+  disclosure suppression, managed by a slightly relaxed coverage threshold
+  (0.90) and logged in the suppression footprint.
 - **Ownership.** QCEW breaks supersectors out by ownership (federal, state,
   local, private); there is no Total-Covered row at supersector level. We sum
   the ownership components into a total per (state, supersector, month).
