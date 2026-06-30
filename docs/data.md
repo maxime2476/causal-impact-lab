@@ -61,12 +61,14 @@ The policy is **scoped, not uniform** (and is stated as such — see ADR-0002).
 - **Seasonality.** QCEW NAICS files are **not seasonally adjusted**. The panel
   carries NSA employment; seasonal handling (controls vs. adjustment) is an
   explicit estimation-stage decision and is not mixed in silently here.
-- **Coverage window.** The QCEW open-data **API serves only 2014 onward**;
-  earlier NAICS history exists solely in bulk flat-file archives (100–250 MB per
-  year). The cross-sectional panel is therefore built for 2014–2020 (within the
-  configured sample), spanning the 2015–2018 tightening cycle and the 2020
-  shock. Extending pre-2014 via the bulk files is a documented follow-up. The
-  aggregate/shock series are unaffected and retain their full history.
+- **Coverage window.** The QCEW open-data **API serves only 2014 onward**. To
+  recover the earlier cycles (1994, 1999–2000, 2004–2006), the cell panel is now
+  built from the annual **`by_area` bulk zips** (`cil.data.qcew_bulk`), which
+  reach back to 1990 (NAICS reconstructed) — one ~400 MB download per year,
+  cached. The panel therefore spans the full shock window (1994–2020), not just
+  2014–2020. NAICS was revised in 2002/2007/2012/2017; 3-digit codes are largely
+  stable across these revisions, with the residual breaks documented as a
+  caveat. The aggregate/shock series are unaffected.
 
 ## ZLB splice
 

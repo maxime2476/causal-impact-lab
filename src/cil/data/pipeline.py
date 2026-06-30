@@ -24,7 +24,7 @@ import httpx
 import polars as pl
 
 from cil.config import Settings, get_settings
-from cil.data import alfred, brw, ces_sae, http, panel, qcew, wuxia
+from cil.data import alfred, brw, ces_sae, http, panel, qcew, qcew_bulk, wuxia
 from cil.data.provenance import cache_raw, load_provenance
 from cil.data.store import Store
 
@@ -120,30 +120,43 @@ def _quarters(start: dt.date, end: dt.date) -> list[tuple[int, int]]:
 
 
 def ingest_qcew(settings: Settings, store: Store, client: httpx.Client) -> int:
-    """Ingest QCEW cells and the suppression footprint; return cell count."""
+    """Ingest QCEW cells (bulk flat files) and the suppression footprint.
+
+    Uses the annual ``by_area`` bulk zips uniformly across the sample (one
+    download per year, cached), at the configured aggregation level. This
+    extends history before the API's 2014 floor and supports any NAICS level
+    (e.g. supersector or 3-digit) from the same cached zips.
+    """
+    qcfg = settings.data.qcew
+    start_year = max(qcfg.bulk_min_year, settings.data.sample.start.year)
+    end_year = settings.data.sample.end.year
     frames: list[pl.DataFrame] = []
-    qcew_start = max(
-        settings.data.sample.start,
-        dt.date(settings.data.qcew.api_min_year, 1, 1),
-    )
-    for code in qcew.SUPERSECTOR_NAMES:
-        for year, quarter in _quarters(qcew_start, settings.data.sample.end):
-            content = _cache_or_fetch(
-                store,
-                settings.paths.data_dir,
-                "qcew",
-                f"{code}_{year}q{quarter}.csv",
-                functools.partial(
-                    qcew.fetch_raw_industry,
-                    client,
-                    settings.data.urls.qcew_area_template,
-                    code,
-                    year,
-                    quarter,
-                ),
+    for year in range(start_year, end_year + 1):
+        content = _cache_or_fetch(
+            store,
+            settings.paths.data_dir,
+            "qcew_bulk",
+            f"{year}.zip",
+            functools.partial(
+                qcew_bulk.fetch_raw_year,
+                client,
+                settings.data.urls.qcew_bulk_template,
+                year,
+            ),
+        )
+        frames.append(
+            qcew_bulk.parse_year(
+                content, year, aggregation_level=qcfg.aggregation_level
             )
-            frames.append(qcew.parse_industry(content, year, quarter))
-    cells = pl.concat(frames).sort(["state_fips", "supersector_code", "date"])
+        )
+    cells = (
+        pl.concat(frames)
+        .filter(
+            (pl.col("date") >= settings.data.sample.start)
+            & (pl.col("date") <= settings.data.sample.end)
+        )
+        .sort(["state_fips", "supersector_code", "date"])
+    )
     store.write_table("qcew_cells", cells)
     store.write_table("qcew_suppression", qcew.suppression_footprint(cells))
     return cells.height
