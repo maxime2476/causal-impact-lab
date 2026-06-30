@@ -85,9 +85,16 @@ after which the EFFR applies.
 ## CES-SAE scope
 
 The CES-SAE cross-check uses state **total-nonfarm** SA employment from FRED's
-mirror (`{ABBR}NA`), converted from thousands to persons to match QCEW. It
-cross-checks state aggregates; supersector-level CES↔QCEW reconciliation is
-deferred to the cross-check robustness work.
+mirror (`{ABBR}NA`), converted from thousands to persons to match QCEW.
+
+**Supersector reconciliation (Tier 0.3).** State × supersector SA All-Employees
+are ingested from the BLS `sm` per-state flat files (state×supersector CES is
+access-constrained on FRED/the BLS API; per-state files avoid both), mapped to
+QCEW supersectors (`CES_TO_QCEW_SUPERSECTOR`), and compared to the QCEW panel
+aggregated up to supersectors. Per (state, supersector) we report the correlation
+of log levels and of year-on-year growth (the growth correlation is the more
+comparable metric since CES is seasonally adjusted while QCEW is not). See
+ADR-0012; results in `docs/results.md`.
 
 ## Reproducing the panels
 

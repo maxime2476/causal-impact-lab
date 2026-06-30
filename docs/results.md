@@ -203,6 +203,23 @@ signal (expansion-state aggregate decline) is consistent with a contractionary
 effect but is assumption-dependent and outside the cleanly-identified relative
 design.
 
+## Data validation — CES vs QCEW reconciliation (Tier 0.3)
+
+The QCEW panel (administrative, near-census) is cross-checked against the
+independent CES State-and-Area survey at the supersector level, 1994–2020 (545
+state × supersector pairs):
+
+- **Median correlation of year-on-year growth: 0.92** (log levels: 0.95) — strong
+  agreement validating the QCEW employment used for the panel and exposure.
+- By supersector the agreement is excellent for the major private sectors
+  (Manufacturing, Construction, Trade/Transport, Leisure, Professional/Business
+  ≈ 0.97–0.99) and weaker for **Mining & Logging (0.56)** and **Government /
+  Public Administration (0.53)** — exactly the two looser CES↔QCEW definitional
+  correspondences, flagged honestly rather than smoothed over.
+
+The QCEW panel is therefore well-validated for the sectors that carry the
+identification; the divergent categories are documented (ADR-0012).
+
 ## Method notes
 
 - Inference: Driscoll-Kraay standard errors (cross-sectional + serial robust),
