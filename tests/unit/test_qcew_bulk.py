@@ -32,6 +32,7 @@ def _zip_bytes() -> bytes:
                     "06000,5,443,55,,2010,1,100,110,120",
                     "06000,3,443,55,N,2010,1,0,0,0",
                     "06000,5,443,55,,2010,2,130,140,150",
+                    "06000,5,999,55,,2010,1,5,5,5",  # Unclassified -> dropped
                 ],
             ),
         )
@@ -57,6 +58,7 @@ def test_parse_year_extracts_state_3digit_cells() -> None:
     apr = cells.filter(pl.col("date") == dt.date(2010, 4, 1))
     assert apr["employment"].to_list() == [130.0]  # Q2 month1, fully disclosed
     assert apr["suppressed"].to_list() == [False]
+    # "Unclassified" (999) is excluded.
     assert cells["supersector_code"].unique().to_list() == ["443"]
 
 

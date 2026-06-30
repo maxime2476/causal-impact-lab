@@ -28,6 +28,8 @@ from cil.data import http
 _STATE_FILE = re.compile(r"\b(\d{2}000)\b.*Statewide\.csv$", re.IGNORECASE)
 _OWNERSHIP_CODES = (1, 2, 3, 5)
 _MAX_STATE_FIPS = 56
+# QCEW "Unclassified" buckets across aggregation levels (not real sectors).
+_UNCLASSIFIED = frozenset({"1029", "99", "999", "9999", "99999", "999999"})
 
 
 def fetch_raw_year(
@@ -128,7 +130,7 @@ def parse_year(content: bytes, year: int, *, aggregation_level: int) -> pl.DataF
                     suppressed_component=pl.col("suppressed_component"),
                 )
             )
-    stacked = pl.concat(months)
+    stacked = pl.concat(months).filter(~pl.col("supersector_code").is_in(_UNCLASSIFIED))
     return (
         stacked.group_by(["state_fips", "supersector_code", "date"])
         .agg(
