@@ -18,7 +18,6 @@ from __future__ import annotations
 import arviz as az
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 import polars as pl
 import pymc as pm
 from pydantic import BaseModel
@@ -44,6 +43,15 @@ class HierarchicalLPData(BaseModel):
     n_sectors: int
 
 
+def _demean_by_group(out: FloatArray, idx: npt.NDArray[np.int_], n_groups: int) -> None:
+    """Subtract group means from every column of *out* in place (vectorized)."""
+    counts = np.bincount(idx, minlength=n_groups).astype(np.float64)
+    counts[counts == 0.0] = 1.0
+    for col in range(out.shape[1]):
+        sums = np.bincount(idx, weights=out[:, col], minlength=n_groups)
+        out[:, col] -= (sums / counts)[idx]
+
+
 def _two_way_demean(
     matrix: FloatArray,
     cell_codes: npt.NDArray[np.int_],
@@ -51,15 +59,20 @@ def _two_way_demean(
     *,
     iters: int = 4,
 ) -> FloatArray:
-    """Absorb cell and time fixed effects by iterative within demeaning."""
+    """Absorb cell and time fixed effects by iterative within demeaning.
+
+    Vectorized with ``bincount`` group sums (the pandas ``groupby.transform``
+    does not scale to the 3-digit panel's ~1.5M rows x ~100 columns).
+    """
     out = np.asarray(matrix, dtype=np.float64).copy()
-    frame = pd.DataFrame(out)
-    cell = pd.Series(cell_codes)
-    time = pd.Series(time_codes)
+    _, cell_idx = np.unique(cell_codes, return_inverse=True)
+    _, time_idx = np.unique(time_codes, return_inverse=True)
+    cell_idx = cell_idx.ravel()
+    time_idx = time_idx.ravel()
     for _ in range(iters):
-        frame = frame - frame.groupby(cell.to_numpy()).transform("mean")
-        frame = frame - frame.groupby(time.to_numpy()).transform("mean")
-    return frame.to_numpy()
+        _demean_by_group(out, cell_idx, int(cell_idx.max()) + 1)
+        _demean_by_group(out, time_idx, int(time_idx.max()) + 1)
+    return out
 
 
 def prepare_design(
@@ -154,16 +167,36 @@ def fit_hierarchical_lp(
     arviz.InferenceData
         Posterior with ``mu_beta`` (population IRF), ``beta`` (sector
         responses), ``tau_beta``, and ``sigma``.
+
+    Notes
+    -----
+    The Gaussian likelihood is expressed through the **sufficient statistics**
+    ``G = X'X``, ``b = X'y`` and ``y'y`` (computed once), so each NUTS gradient
+    costs O(n_sectors^2) rather than O(n * n_sectors). The posterior is exactly
+    the full model's; this is what makes the 3-digit panel (~1.5M rows) tractable.
     """
     n_sectors = x.shape[1]
+    gram = x.T @ x
+    xty = x.T @ y
+    yty = float(y @ y)
+    n_obs = float(y.shape[0])
     with pm.Model():
         mu_beta = pm.Normal("mu_beta", 0.0, prior_sd)
         tau_beta = pm.HalfNormal("tau_beta", prior_sd)
         z = pm.Normal("z", 0.0, 1.0, shape=n_sectors)
         beta = pm.Deterministic("beta", mu_beta + tau_beta * z)
         sigma = pm.HalfNormal("sigma", 1.0)
-        mean = pm.math.dot(x, beta)
-        pm.Normal("y_obs", mean, sigma, observed=y)
+        # Residual sum of squares via sufficient statistics:
+        # (y - Xb)'(y - Xb) = y'y - 2 b'(X'y) + b'(X'X) b.
+        rss = (
+            yty
+            - 2.0 * pm.math.dot(beta, xty)
+            + pm.math.dot(beta, pm.math.dot(gram, beta))
+        )
+        log_lik = (
+            -0.5 * n_obs * pm.math.log(2.0 * np.pi * sigma**2) - 0.5 * rss / sigma**2
+        )
+        pm.Potential("likelihood", log_lik)
         return pm.sample(
             draws=draws,
             tune=tune,

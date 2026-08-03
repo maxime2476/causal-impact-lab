@@ -27,7 +27,7 @@ repos:
       # Strict type checking against the project environment.
       - id: mypy
         name: mypy (strict)
-        entry: uv run mypy
+        entry: uv run python -m mypy
         language: system
         types: [python]
         pass_filenames: false

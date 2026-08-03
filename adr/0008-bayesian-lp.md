@@ -33,6 +33,16 @@ headline relative effect.
 - **Triangulation:** the posterior ``mu_beta`` is compared to the frequentist
   panel-LP ``beta_h``.
 
+## Update (Tier 0.2, 3-digit panel)
+
+The per-sector one-hot design at 3-digit is ~1.5M rows × ~100 columns, on which
+the naive likelihood (and the pandas two-way demean) does not scale. The model is
+now fit through its **sufficient statistics** — `G = X'X`, `X'y`, `y'y`, `n`,
+computed once after a vectorized (`bincount`) two-way demean — so each NUTS
+gradient costs O(k²) instead of O(n·k). The posterior is **exactly** the full
+model's (verified by the recovery test); a full horizon fit drops from
+intractable to ~20 seconds. This is a computation change, not a model change.
+
 ## Consequences
 
 - The Bayesian and frequentist estimators are compared on the same design; a
