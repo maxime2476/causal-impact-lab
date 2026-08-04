@@ -51,6 +51,28 @@ This is a deliberate, disclosed deviation from the frozen plan (supersector →
 3-digit, ADR-0011); the registered supersector result below stands as the
 pre-registered benchmark and was not edited to fit this.
 
+**Downstream triangulation on the 3-digit panel** (re-run at full settings; the
+Bayesian was reformulated to sufficient statistics to scale — same posterior,
+ADR-0008):
+
+- **DML** (`dml_results`): the LinearDML effect is **significantly negative on
+  impact** (h=0: −0.016, 95% CI [−0.021, −0.011]) with CausalForest agreeing in
+  sign, drifting toward zero/positive at longer horizons; placebos ≈ 0.
+- **Bayesian** (`bayes_vs_freq`): the population IRF is negative at every horizon
+  (μ_β −0.004/−0.018/−0.006), a shrunk version of the frequentist β_h — the two
+  paradigms now **agree in sign** (both negative), where they disagreed before.
+- **Specification curve**: the median β is now **negative** at both decision
+  horizons (h=12: −0.002, 50% of specs negative; h=24: −0.004, 67% negative),
+  versus a positive-leaning minority in the registered window; still 0% BH-
+  significant.
+- **QCEW revision bound**: negligible (β ∈ [−0.021, −0.021]); **CES growth
+  correlation 0.92** validates the panel (Tier 0.3).
+
+**Net:** the power work (1994–2020, 3-digit) turns the headline from a
+wrong-signed, pre-trend-flagged result into a **correctly-signed, clean-pre-trend,
+cross-estimator-consistent null** — a materially more credible finding, still
+short of conventional significance on this sample.
+
 ## Headline relative effect (Phase 4, preliminary; pre-registered benchmark)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline
