@@ -110,6 +110,10 @@ class SourceUrls(BaseModel):
         Direct URL of the Atlanta Fed Wu-Xia shadow-rate workbook.
     brw_csv
         Direct URL of the Bu-Rogers-Wu shock-series CSV.
+    mps_xlsx
+        Direct URL of the SF Fed Bauer-Swanson monetary-policy-surprises workbook
+        (high-frequency FOMC surprises: raw ``MPS`` and orthogonalized
+        ``MPS_ORTH``, monthly and per-FOMC).
     """
 
     fred_base: str = "https://api.stlouisfed.org/fred"
@@ -126,6 +130,9 @@ class SourceUrls(BaseModel):
     )
     brw_csv: str = (
         "https://www.federalreserve.gov/econres/feds/files/brw-shock-series.csv"
+    )
+    mps_xlsx: str = (
+        "https://www.frbsf.org/wp-content/uploads/monetary-policy-surprises-data.xlsx"
     )
 
 

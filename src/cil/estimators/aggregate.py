@@ -54,17 +54,17 @@ def build_aggregate_irf(settings: Settings | None = None) -> dict[str, float]:
         )
         store.write_table("ts_lp_irf", ts)
 
-        iv = lp_iv(
-            employment,
-            policy,
-            brw,
-            LPIVConfig(
-                horizons=horizons,
-                confidence_level=settings.inference.confidence_level,
-            ),
-            instrument_col="brw_monthly",
+        # Headline LP-IV instrument: the Bauer-Swanson HF surprise (a far stronger
+        # first stage than BRW); BRW retained as a robustness variant.
+        iv_config = LPIVConfig(
+            horizons=horizons,
+            confidence_level=settings.inference.confidence_level,
         )
+        mps = store.read_table("mps")
+        iv = lp_iv(employment, policy, mps, iv_config, instrument_col="mps")
         store.write_table("lpiv_irf", iv)
+        iv_brw = lp_iv(employment, policy, brw, iv_config, instrument_col="brw_monthly")
+        store.write_table("lpiv_irf_brw", iv_brw)
 
         def _at(frame: pl.DataFrame, col: str, h: int) -> float:
             row = frame.filter(pl.col("horizon") == h)
@@ -74,7 +74,10 @@ def build_aggregate_irf(settings: Settings | None = None) -> dict[str, float]:
             "ts_lp_theta_h12": _at(ts, "theta", 12),
             "ts_lp_theta_h24": _at(ts, "theta", 24),
             "lpiv_theta_h12": _at(iv, "theta", 12),
-            "lpiv_min_first_stage_f": float(iv["first_stage_f"].to_numpy().min()),
+            "lpiv_mps_min_first_stage_f": float(iv["first_stage_f"].to_numpy().min()),
+            "lpiv_brw_min_first_stage_f": float(
+                iv_brw["first_stage_f"].to_numpy().min()
+            ),
         }
 
 

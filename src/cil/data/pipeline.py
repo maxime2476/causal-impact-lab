@@ -24,7 +24,7 @@ import httpx
 import polars as pl
 
 from cil.config import Settings, get_settings
-from cil.data import alfred, brw, ces_sae, http, panel, qcew, qcew_bulk, wuxia
+from cil.data import alfred, brw, ces_sae, http, mps, panel, qcew, qcew_bulk, wuxia
 from cil.data.provenance import cache_raw, load_provenance
 from cil.data.store import Store
 
@@ -194,6 +194,21 @@ def ingest_brw(settings: Settings, store: Store, client: httpx.Client) -> int:
     return shocks.height
 
 
+def ingest_mps(settings: Settings, store: Store, client: httpx.Client) -> int:
+    """Ingest the Bauer-Swanson HF surprises (monthly + FOMC); return row count."""
+    content = _cache_or_fetch(
+        store,
+        settings.paths.data_dir,
+        "mps",
+        "monetary-policy-surprises.xlsx",
+        lambda: mps.fetch_raw(client, settings.data.urls.mps_xlsx),
+    )
+    monthly = mps.parse_monthly(content)
+    store.write_table("mps", monthly)
+    store.write_table("mps_fomc", mps.parse_fomc(content))
+    return monthly.height
+
+
 def ingest_ces(settings: Settings, store: Store, client: httpx.Client) -> int:
     """Ingest CES-SAE state total-nonfarm cross-check; return the row count."""
     if settings.fred_api_key is None:
@@ -252,6 +267,7 @@ def run(settings: Settings | None = None) -> dict[str, int]:
             summary["macro_pit_rows"] = ingest_macro(settings, store, client)
             summary["wuxia_rows"] = ingest_wuxia(settings, store, client)
             summary["brw_rows"] = ingest_brw(settings, store, client)
+            summary["mps_rows"] = ingest_mps(settings, store, client)
             summary["ces_rows"] = ingest_ces(settings, store, client)
             summary["qcew_cells"] = ingest_qcew(settings, store, client)
             n_panel, n_dropped = build_panels(settings, store)

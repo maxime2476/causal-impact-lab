@@ -138,6 +138,14 @@ employment decline at the medium run but is imprecise, and the structural
 rate-response is weakly identified. It does not overturn or substitute for the
 headline relative design.
 
+**Tier 1.1 update — stronger instrument.** Replacing the BRW instrument with the
+Bauer-Swanson high-frequency surprise (SF Fed) strengthens the LP-IV first stage
+from robust F ~ 3-5 to **~13-15** at h = 0/12 (ADR-0013). Identification is now
+strong, but the point IRF becomes **wrong-signed at the medium run** (a
+price-puzzle-like `theta_12 > 0`) — an economically implausible result that
+*reinforces* treating the aggregate as an assumption-dependent complement rather
+than the answer. BRW is retained as a robustness variant.
+
 ## Heterogeneity via DML (Phase 6)
 
 Double/debiased ML (EconML) with **purged time-blocked cross-fitting** estimates
