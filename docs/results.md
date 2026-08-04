@@ -146,6 +146,17 @@ price-puzzle-like `theta_12 > 0`) — an economically implausible result that
 *reinforces* treating the aggregate as an assumption-dependent complement rather
 than the answer. BRW is retained as a robustness variant.
 
+**Tier 1.2 update — narrative-shock complement.** A second, independent aggregate
+identification uses the updated Romer-Romer narrative shock (Breitenlechner 2018;
+quarterly, forecast-purged intended-funds-rate changes) in a quarterly employment
+LP (`rr_lp_irf`, ADR-0014). Here the response is **correctly signed** — employment
+turns negative from ~ 7 quarters and troughs near **-0.43% around 3-4 years** —
+but **imprecise**, with every HAC interval including zero. The two aggregate
+identifications therefore *disagree on sign* (HF wrong-signed, narrative
+right-signed but insignificant); the disagreement is the point — the aggregate is
+assumption-dependent, and the cleanly-identified relative design stays the
+headline.
+
 ## Heterogeneity via DML (Phase 6)
 
 Double/debiased ML (EconML) with **purged time-blocked cross-fitting** estimates

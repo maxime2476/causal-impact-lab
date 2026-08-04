@@ -88,6 +88,19 @@ MPS_FOMC_SCHEMA = DataFrameSchema(
     coerce=True,
 )
 
+#: Updated Romer-Romer (2004) quarterly narrative shocks (three vintages).
+RR_SHOCKS_SCHEMA = DataFrameSchema(
+    {
+        "date": Column(pl.Date),
+        "rr_org": Column(pl.Float64, nullable=True),
+        "rr08": Column(pl.Float64, nullable=True),
+        "rr12": Column(pl.Float64, nullable=True),
+    },
+    unique=["date"],
+    strict=True,
+    coerce=True,
+)
+
 #: QCEW state-by-supersector monthly employment, with a suppression flag.
 QCEW_CELL_SCHEMA = DataFrameSchema(
     {

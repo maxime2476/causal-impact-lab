@@ -24,7 +24,18 @@ import httpx
 import polars as pl
 
 from cil.config import Settings, get_settings
-from cil.data import alfred, brw, ces_sae, http, mps, panel, qcew, qcew_bulk, wuxia
+from cil.data import (
+    alfred,
+    brw,
+    ces_sae,
+    http,
+    mps,
+    panel,
+    qcew,
+    qcew_bulk,
+    rr,
+    wuxia,
+)
 from cil.data.provenance import cache_raw, load_provenance
 from cil.data.store import Store
 
@@ -209,6 +220,20 @@ def ingest_mps(settings: Settings, store: Store, client: httpx.Client) -> int:
     return monthly.height
 
 
+def ingest_rr(settings: Settings, store: Store, client: httpx.Client) -> int:
+    """Ingest the updated Romer-Romer narrative shocks (quarterly); return rows."""
+    content = _cache_or_fetch(
+        store,
+        settings.paths.data_dir,
+        "rr",
+        "UpdateRR04shocks.dta",
+        lambda: rr.fetch_raw(client, settings.data.urls.rr_shocks_dta),
+    )
+    shocks = rr.parse(content)
+    store.write_table("rr_shocks", shocks)
+    return shocks.height
+
+
 def ingest_ces(settings: Settings, store: Store, client: httpx.Client) -> int:
     """Ingest CES-SAE state total-nonfarm cross-check; return the row count."""
     if settings.fred_api_key is None:
@@ -268,6 +293,7 @@ def run(settings: Settings | None = None) -> dict[str, int]:
             summary["wuxia_rows"] = ingest_wuxia(settings, store, client)
             summary["brw_rows"] = ingest_brw(settings, store, client)
             summary["mps_rows"] = ingest_mps(settings, store, client)
+            summary["rr_rows"] = ingest_rr(settings, store, client)
             summary["ces_rows"] = ingest_ces(settings, store, client)
             summary["qcew_cells"] = ingest_qcew(settings, store, client)
             n_panel, n_dropped = build_panels(settings, store)

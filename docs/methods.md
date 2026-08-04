@@ -105,6 +105,21 @@ stage is **weak** in the monthly effective-funds-rate configuration (robust
 F ≈ 0.7), which is reported, not hidden. The headline-shock choice is recorded
 in ADR-0004.
 
+### External shock series (Tier 1)
+
+Two purpose-built external series strengthen and cross-check identification:
+
+- **High-frequency instrument** — the Bauer-Swanson MPS (`cil.data.mps`; SF Fed)
+  replaces BRW as the headline LP-IV instrument. The first stage strengthens to
+  robust F ≈ 13–15 at h = 0/12 (vs BRW's ~3–5), though the resulting aggregate
+  IRF is wrong-signed at the medium run (ADR-0013).
+- **Narrative shock** — the updated Romer-Romer series (`cil.data.rr`;
+  Breitenlechner 2018) is a forecast-purged, non-market identification used in a
+  quarterly aggregate LP (`rr_lp_irf`); correctly signed but imprecise (ADR-0014).
+
+The two aggregate identifications disagree on sign, which is itself the message:
+the aggregate response is assumption-dependent. See `docs/results.md`.
+
 ## Assumptions registry
 
 `cil.dag.assumptions` is the single source of truth linking each identifying
