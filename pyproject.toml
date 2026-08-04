@@ -123,6 +123,7 @@ module = [
     "econml.*",
     "dowhy.*",
     "pymc.*",
+    "pytensor.*",
     "arviz.*",
     "fredapi.*",
     "duckdb.*",

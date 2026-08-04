@@ -101,6 +101,9 @@ class SourceUrls(BaseModel):
     qcew_area_template
         QCEW open-data area CSV template; formatted with ``year``, ``qtr``,
         and ``area`` (e.g. ``"01000"`` for Alabama, ``"US000"`` national).
+    qcew_bulk_template
+        QCEW annual ``by_area`` bulk-zip template (formatted with ``year``);
+        used to extend history before the open-data API's 2014 floor.
     bls_flat_base
         BLS time-series flat-file root (used for CES-SAE / ``sm`` files).
     wuxia_xlsx
@@ -112,6 +115,9 @@ class SourceUrls(BaseModel):
     fred_base: str = "https://api.stlouisfed.org/fred"
     qcew_area_template: str = (
         "https://data.bls.gov/cew/data/api/{year}/{qtr}/area/{area}.csv"
+    )
+    qcew_bulk_template: str = (
+        "https://data.bls.gov/cew/data/files/{year}/csv/{year}_qtrly_by_area.zip"
     )
     bls_flat_base: str = "https://download.bls.gov/pub/time.series"
     wuxia_xlsx: str = (
@@ -188,16 +194,19 @@ class QcewConfig(BaseModel):
         non-suppressed and positive to be retained; cells below this are flagged
         and dropped. In ``[0, 1]``.
     api_min_year
-        Earliest year served by the QCEW open-data API. The API exposes only
-        2014 onward; earlier NAICS history exists solely in bulk flat files and
-        is a documented follow-up (see ``docs/data.md``). QCEW ingestion is
-        clamped to start no earlier than this year.
+        Earliest year served by the QCEW open-data API (2014). Years from this
+        year onward are pulled via the API; earlier years come from the bulk
+        flat-file path.
+    bulk_min_year
+        Earliest year pulled from the QCEW ``by_area`` bulk flat files (NAICS
+        reconstructed back to 1990). Extends history before ``api_min_year``.
     """
 
-    aggregation_level: int = 53
+    aggregation_level: int = 55
     ownership_code: int = 0
-    coverage_min_fraction: float = Field(default=0.95, ge=0.0, le=1.0)
+    coverage_min_fraction: float = Field(default=0.90, ge=0.0, le=1.0)
     api_min_year: int = 2014
+    bulk_min_year: int = 1990
 
 
 class ZlbWindow(BaseModel):

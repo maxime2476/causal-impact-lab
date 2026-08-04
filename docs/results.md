@@ -27,7 +27,53 @@ clearest path to more power. The claim, sign, horizons, and falsification
 conditions were frozen before estimation and were **not** revised to fit any of
 this.
 
-## Headline relative effect (Phase 4, preliminary)
+## Update — Tier 0: extended 3-digit panel (1994–2020)
+
+Post-v0.1.0, the cell panel was extended back to 1994 (QCEW bulk flat files) and
+refined to **NAICS 3-digit** (~4,566 state × sector cells vs 547 supersector
+cells; see ADR-0010/0011). The headline interacted panel LP on this larger,
+finer panel is **markedly more credible**, though still a null in significance:
+
+| Horizon | beta_h (3-digit, 1994–2020) | BH p | vs. registered (supersector, 2014–2020) |
+|---|---|---|---|
+| h = 0 | **-0.025** | 0.48 | -0.11 |
+| h = 12 | **-0.021** | 0.77 | +0.19 (wrong sign) |
+| h = 24 | **-0.012** | 0.83 | +0.10 (wrong sign) |
+
+- **All 25 response horizons are now negative** (the expected sign), versus
+  wrong-signed positives in the registered window.
+- The **event-study leads are clean** (max |t| ≈ 1.3, none significant) — the
+  marginal pre-trend that flagged the registered design is gone.
+- Magnitudes remain small and **not BH-significant**: a correctly-signed,
+  well-behaved **null**, reported as such.
+
+This is a deliberate, disclosed deviation from the frozen plan (supersector →
+3-digit, ADR-0011); the registered supersector result below stands as the
+pre-registered benchmark and was not edited to fit this.
+
+**Downstream triangulation on the 3-digit panel** (re-run at full settings; the
+Bayesian was reformulated to sufficient statistics to scale — same posterior,
+ADR-0008):
+
+- **DML** (`dml_results`): the LinearDML effect is **significantly negative on
+  impact** (h=0: −0.016, 95% CI [−0.021, −0.011]) with CausalForest agreeing in
+  sign, drifting toward zero/positive at longer horizons; placebos ≈ 0.
+- **Bayesian** (`bayes_vs_freq`): the population IRF is negative at every horizon
+  (μ_β −0.004/−0.018/−0.006), a shrunk version of the frequentist β_h — the two
+  paradigms now **agree in sign** (both negative), where they disagreed before.
+- **Specification curve**: the median β is now **negative** at both decision
+  horizons (h=12: −0.002, 50% of specs negative; h=24: −0.004, 67% negative),
+  versus a positive-leaning minority in the registered window; still 0% BH-
+  significant.
+- **QCEW revision bound**: negligible (β ∈ [−0.021, −0.021]); **CES growth
+  correlation 0.92** validates the panel (Tier 0.3).
+
+**Net:** the power work (1994–2020, 3-digit) turns the headline from a
+wrong-signed, pre-trend-flagged result into a **correctly-signed, clean-pre-trend,
+cross-estimator-consistent null** — a materially more credible finding, still
+short of conventional significance on this sample.
+
+## Headline relative effect (Phase 4, preliminary; pre-registered benchmark)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline
 shock, estimated shift-share exposure) on the 2014-2020 state-by-supersector
@@ -178,6 +224,23 @@ effect is not robustly identified on the 2014-2020 sample. The one suggestive
 signal (expansion-state aggregate decline) is consistent with a contractionary
 effect but is assumption-dependent and outside the cleanly-identified relative
 design.
+
+## Data validation — CES vs QCEW reconciliation (Tier 0.3)
+
+The QCEW panel (administrative, near-census) is cross-checked against the
+independent CES State-and-Area survey at the supersector level, 1994–2020 (545
+state × supersector pairs):
+
+- **Median correlation of year-on-year growth: 0.92** (log levels: 0.95) — strong
+  agreement validating the QCEW employment used for the panel and exposure.
+- By supersector the agreement is excellent for the major private sectors
+  (Manufacturing, Construction, Trade/Transport, Leisure, Professional/Business
+  ≈ 0.97–0.99) and weaker for **Mining & Logging (0.56)** and **Government /
+  Public Administration (0.53)** — exactly the two looser CES↔QCEW definitional
+  correspondences, flagged honestly rather than smoothed over.
+
+The QCEW panel is therefore well-validated for the sectors that carry the
+identification; the divergent categories are documented (ADR-0012).
 
 ## Method notes
 

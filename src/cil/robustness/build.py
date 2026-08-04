@@ -38,11 +38,12 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
         sigma = ss.estimate_sigma_semielasticity(
             ss.national_sector_log_employment(cells), policy
         )
+        codes = cells["supersector_code"].unique().to_list()
         exposures = {
             "estimated": ss.cell_exposure(
                 sigma.select("supersector_code", "sensitivity")
             ),
-            "duration": ss.cell_exposure(ss.duration_proxy_sigma()),
+            "duration": ss.cell_exposure(ss.duration_proxy_for_codes(codes)),
         }
         brw_shock = brw.rename({"brw_monthly": "shock"})
         rr_shock = shocks_tbl.select("date", "rr_shock").drop_nulls()
