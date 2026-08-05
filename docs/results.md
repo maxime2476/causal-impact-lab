@@ -157,6 +157,14 @@ right-signed but insignificant); the disagreement is the point — the aggregate
 assumption-dependent, and the cleanly-identified relative design stays the
 headline.
 
+**Tier 1.3 update — high-frequency information effect.** The Jarocinski-Karadi
+test, run on the true announcement window (`mps_fomc` rate vs same-window S&P 500)
+rather than a monthly proxy, finds **32.5% of FOMC surprises are information-type**
+(105 / 323 events) — versus 52% for the monthly proxy of the same series, which is
+inflated by non-FOMC equity news (ADR-0015). The information effect is real but
+smaller than the proxy implied; a decontaminated instrument (`mps_clean`) is
+retained for robustness.
+
 ## Heterogeneity via DML (Phase 6)
 
 Double/debiased ML (EconML) with **purged time-blocked cross-fitting** estimates

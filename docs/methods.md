@@ -88,10 +88,14 @@ Three monetary-shock series are built and compared (`cil.shocks`):
 
 Diagnostics reported (`info_effect`, `predictability`, `compare`):
 
-- **Information-effect test** (Jarocinski-Karadi, monthly proxy): classify each
-  surprise as policy vs. information by the sign co-movement of the shock with
-  broad equity returns; report the contamination share. The monthly proxy
-  overstates contamination relative to the high-frequency test.
+- **Information-effect test** (Jarocinski-Karadi): classify each surprise as
+  policy vs. information by the sign co-movement of the shock with equity returns;
+  report the contamination share. Two variants — a **monthly proxy** and, since
+  Tier 1.3, the true **high-frequency** test on the same-window `mps_fomc` rate
+  and S&P 500 moves (`classify_high_frequency`). The monthly proxy overstates
+  contamination (52% for MPS) relative to the HF window (33%, 105/323 events),
+  because month-long equity moves are dominated by non-FOMC news (ADR-0015). A
+  decontaminated instrument `mps_clean` (information events zeroed) is emitted.
 - **Predictability test** (Bauer-Swanson): regress the shock on lagged real-time
   predictors; report R-squared and the joint F p-value. A clean shock is
   unpredictable.

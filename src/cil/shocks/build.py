@@ -102,6 +102,8 @@ def build_shocks(settings: Settings | None = None) -> dict[str, float]:
             macro_current = store.read_table("macro_current")
             policy_rate = store.read_table("policy_rate")
             brw = store.read_table("brw_shocks")
+            mps_monthly = store.read_table("mps")
+            mps_fomc = store.read_table("mps_fomc")
             equity = monthly_equity_returns(settings, store, client)
 
             rr_shock, rr_diag = rr_orthogonalization.romer_romer_shock(
@@ -125,6 +127,22 @@ def build_shocks(settings: Settings | None = None) -> dict[str, float]:
             store.write_table("shocks", shocks)
 
             _, info_summary = info_effect.classify(brw, equity, shock_col="brw_monthly")
+
+            # Jarocinski-Karadi at the true announcement window vs a monthly proxy
+            # of the *same* MPS series: the window is the only thing that differs,
+            # so the gap isolates the proxy's overstatement of contamination.
+            hf_classified, info_hf = info_effect.classify_high_frequency(mps_fomc)
+            _, info_mps_monthly = info_effect.classify(
+                mps_monthly, equity, shock_col="mps"
+            )
+            mps_clean = (
+                hf_classified.with_columns(date=pl.col("date").dt.truncate("1mo"))
+                .group_by("date")
+                .agg(mps_clean=pl.col("monetary_component").sum())
+                .sort("date")
+            )
+            store.write_table("mps_clean", mps_clean)
+
             feats = features.realtime_macro_features(macro_pit)
             pred_brw = predictability.predictability_test(
                 brw,
@@ -148,7 +166,15 @@ def build_shocks(settings: Settings | None = None) -> dict[str, float]:
                 }
             )
             _store_diagnostics(
-                store, rr_diag, fs_diag, info_summary, pred_brw, pred_rr, xcorr
+                store,
+                rr_diag,
+                fs_diag,
+                info_summary,
+                info_hf,
+                info_mps_monthly,
+                pred_brw,
+                pred_rr,
+                xcorr,
             )
 
             summary = {
@@ -156,6 +182,10 @@ def build_shocks(settings: Settings | None = None) -> dict[str, float]:
                 "svar_first_stage_f": fs_diag.robust_f,
                 "svar_weak": float(fs_diag.weak),
                 "info_contamination_share": info_summary.contamination_share,
+                "info_hf_contamination_share": info_hf.contamination_share,
+                "info_mps_monthly_contamination_share": (
+                    info_mps_monthly.contamination_share
+                ),
                 "brw_predictability_p": pred_brw.f_pvalue,
                 "rr_predictability_p": pred_rr.f_pvalue,
                 **{f"corr_{c.series_a}_{c.series_b}": c.correlation for c in xcorr},
@@ -170,6 +200,8 @@ def _store_diagnostics(
     rr_diag: rr_orthogonalization.OrthogonalizationDiagnostics,
     fs_diag: proxy_svar.FirstStageDiagnostics,
     info_summary: info_effect.InfoEffectSummary,
+    info_hf: info_effect.InfoEffectSummary,
+    info_mps_monthly: info_effect.InfoEffectSummary,
     pred_brw: predictability.PredictabilityResult,
     pred_rr: predictability.PredictabilityResult,
     xcorr: list[compare.PairwiseCorrelation],
@@ -186,6 +218,16 @@ def _store_diagnostics(
             "value": info_summary.contamination_share,
         },
         {"metric": "info_n_information", "value": float(info_summary.n_information)},
+        {
+            "metric": "info_hf_contamination_share",
+            "value": info_hf.contamination_share,
+        },
+        {"metric": "info_hf_n_events", "value": float(info_hf.n_months)},
+        {"metric": "info_hf_n_information", "value": float(info_hf.n_information)},
+        {
+            "metric": "info_mps_monthly_contamination_share",
+            "value": info_mps_monthly.contamination_share,
+        },
         {"metric": "brw_predictability_p", "value": pred_brw.f_pvalue},
         {"metric": "rr_predictability_p", "value": pred_rr.f_pvalue},
     ]
