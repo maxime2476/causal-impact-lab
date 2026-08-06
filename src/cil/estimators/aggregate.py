@@ -125,6 +125,9 @@ def build_aggregate_irf(settings: Settings | None = None) -> dict[str, float]:
         store.write_table("lpiv_irf", iv)
         iv_brw = lp_iv(employment, policy, brw, iv_config, instrument_col="brw_monthly")
         store.write_table("lpiv_irf_brw", iv_brw)
+        # Predictability-robust variant: the orthogonalized surprise MPS_ORTH.
+        iv_orth = lp_iv(employment, policy, mps, iv_config, instrument_col="mps_orth")
+        store.write_table("lpiv_irf_orth", iv_orth)
 
         def _at(frame: pl.DataFrame, col: str, h: int) -> float:
             row = frame.filter(pl.col("horizon") == h)
@@ -134,7 +137,11 @@ def build_aggregate_irf(settings: Settings | None = None) -> dict[str, float]:
             "ts_lp_theta_h12": _at(ts, "theta", 12),
             "ts_lp_theta_h24": _at(ts, "theta", 24),
             "lpiv_theta_h12": _at(iv, "theta", 12),
+            "lpiv_orth_theta_h12": _at(iv_orth, "theta", 12),
             "lpiv_mps_min_first_stage_f": float(iv["first_stage_f"].to_numpy().min()),
+            "lpiv_orth_min_first_stage_f": float(
+                iv_orth["first_stage_f"].to_numpy().min()
+            ),
             "lpiv_brw_min_first_stage_f": float(
                 iv_brw["first_stage_f"].to_numpy().min()
             ),

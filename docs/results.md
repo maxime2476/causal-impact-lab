@@ -165,6 +165,15 @@ inflated by non-FOMC equity news (ADR-0015). The information effect is real but
 smaller than the proxy implied; a decontaminated instrument (`mps_clean`) is
 retained for robustness.
 
+**Tier 1.4 update — orthogonalized variant.** Instrumenting the LP-IV with the
+orthogonalized surprise `MPS_ORTH` (predictable/information variation removed)
+**flips the aggregate IRF to the theory-consistent negative sign** at every
+horizon (θ₁₂ = −0.63 vs the raw MPS's +4.03) — but the first stage collapses to
+F ≈ 1.6–2.8 (weak throughout). Removing the same information component flagged in
+1.3 corrects the price-puzzle sign, at the cost of identification (ADR-0016). The
+two instruments bracket the aggregate response — strong-but-contaminated vs
+clean-but-weak — so neither delivers a reliable aggregate point estimate.
+
 ## Heterogeneity via DML (Phase 6)
 
 Double/debiased ML (EconML) with **purged time-blocked cross-fitting** estimates

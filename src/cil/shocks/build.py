@@ -158,6 +158,22 @@ def build_shocks(settings: Settings | None = None) -> dict[str, float]:
                 predictor_cols=_FEATURE_COLS,
                 n_lags=settings.shocks.predictability_lags,
             )
+            # Orthogonalized variant: MPS_ORTH should be less predictable than the
+            # raw MPS by construction (Bauer-Swanson). Test both to confirm.
+            pred_mps = predictability.predictability_test(
+                mps_monthly,
+                feats,
+                shock_col="mps",
+                predictor_cols=_FEATURE_COLS,
+                n_lags=settings.shocks.predictability_lags,
+            )
+            pred_mps_orth = predictability.predictability_test(
+                mps_monthly,
+                feats,
+                shock_col="mps_orth",
+                predictor_cols=_FEATURE_COLS,
+                n_lags=settings.shocks.predictability_lags,
+            )
             xcorr = compare.cross_correlations(
                 {
                     "rr_shock": rr_shock,
@@ -174,6 +190,8 @@ def build_shocks(settings: Settings | None = None) -> dict[str, float]:
                 info_mps_monthly,
                 pred_brw,
                 pred_rr,
+                pred_mps,
+                pred_mps_orth,
                 xcorr,
             )
 
@@ -188,6 +206,8 @@ def build_shocks(settings: Settings | None = None) -> dict[str, float]:
                 ),
                 "brw_predictability_p": pred_brw.f_pvalue,
                 "rr_predictability_p": pred_rr.f_pvalue,
+                "mps_predictability_p": pred_mps.f_pvalue,
+                "mps_orth_predictability_p": pred_mps_orth.f_pvalue,
                 **{f"corr_{c.series_a}_{c.series_b}": c.correlation for c in xcorr},
             }
     finally:
@@ -204,6 +224,8 @@ def _store_diagnostics(
     info_mps_monthly: info_effect.InfoEffectSummary,
     pred_brw: predictability.PredictabilityResult,
     pred_rr: predictability.PredictabilityResult,
+    pred_mps: predictability.PredictabilityResult,
+    pred_mps_orth: predictability.PredictabilityResult,
     xcorr: list[compare.PairwiseCorrelation],
 ) -> None:
     """Persist shock diagnostics and cross-correlations to the store."""
@@ -230,6 +252,10 @@ def _store_diagnostics(
         },
         {"metric": "brw_predictability_p", "value": pred_brw.f_pvalue},
         {"metric": "rr_predictability_p", "value": pred_rr.f_pvalue},
+        {"metric": "mps_predictability_p", "value": pred_mps.f_pvalue},
+        {"metric": "mps_predictability_r2", "value": pred_mps.r_squared},
+        {"metric": "mps_orth_predictability_p", "value": pred_mps_orth.f_pvalue},
+        {"metric": "mps_orth_predictability_r2", "value": pred_mps_orth.r_squared},
     ]
     store.write_table("shock_diagnostics", pl.DataFrame(rows))
     store.write_table(

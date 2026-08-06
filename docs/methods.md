@@ -120,9 +120,15 @@ Two purpose-built external series strengthen and cross-check identification:
 - **Narrative shock** — the updated Romer-Romer series (`cil.data.rr`;
   Breitenlechner 2018) is a forecast-purged, non-market identification used in a
   quarterly aggregate LP (`rr_lp_irf`); correctly signed but imprecise (ADR-0014).
+- **Orthogonalized variant** — the predictability-purged `MPS_ORTH` instruments a
+  fourth LP-IV (`lpiv_irf_orth`). It flips the aggregate IRF to the correct
+  negative sign but with a weak first stage (F ≈ 1.6–2.8), bracketing the raw MPS
+  from the clean-but-weak side (ADR-0016). A predictability comparison confirms
+  `MPS_ORTH` is only modestly less predictable from our real-time macro lags than
+  `MPS` (R² 0.058 vs 0.065), since it is orthogonalized to a different set.
 
-The two aggregate identifications disagree on sign, which is itself the message:
-the aggregate response is assumption-dependent. See `docs/results.md`.
+The aggregate identifications disagree on sign, which is itself the message: the
+aggregate response is assumption-dependent. See `docs/results.md`.
 
 ## Assumptions registry
 
