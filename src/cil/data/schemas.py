@@ -64,6 +64,43 @@ BRW_SHOCK_SCHEMA = DataFrameSchema(
     coerce=True,
 )
 
+#: Bauer-Swanson monthly monetary policy surprises (raw + orthogonalized).
+MPS_MONTHLY_SCHEMA = DataFrameSchema(
+    {
+        "date": Column(pl.Date),
+        "mps": Column(pl.Float64, nullable=True),
+        "mps_orth": Column(pl.Float64, nullable=True),
+    },
+    unique=["date"],
+    strict=True,
+    coerce=True,
+)
+
+#: Bauer-Swanson per-FOMC surprises with the same-window S&P 500 change.
+MPS_FOMC_SCHEMA = DataFrameSchema(
+    {
+        "date": Column(pl.Date),
+        "mps": Column(pl.Float64, nullable=True),
+        "mps_orth": Column(pl.Float64, nullable=True),
+        "sp500": Column(pl.Float64, nullable=True),
+    },
+    strict=True,
+    coerce=True,
+)
+
+#: Updated Romer-Romer (2004) quarterly narrative shocks (three vintages).
+RR_SHOCKS_SCHEMA = DataFrameSchema(
+    {
+        "date": Column(pl.Date),
+        "rr_org": Column(pl.Float64, nullable=True),
+        "rr08": Column(pl.Float64, nullable=True),
+        "rr12": Column(pl.Float64, nullable=True),
+    },
+    unique=["date"],
+    strict=True,
+    coerce=True,
+)
+
 #: QCEW state-by-supersector monthly employment, with a suppression flag.
 QCEW_CELL_SCHEMA = DataFrameSchema(
     {

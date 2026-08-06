@@ -15,6 +15,8 @@ project are computed on real data; synthetic data appears only in tests.
 | State × supersector employment | BLS QCEW | open-data API (CSV) | monthly | **revised (final)**, documented |
 | State employment cross-check | BLS CES-SAE via FRED (`{ABBR}NA`) | API (key) | monthly (SA) | as-published |
 | Published shock benchmark | Bu-Rogers-Wu | author CSV | monthly / per-FOMC | as-published |
+| HF monetary surprise (headline instrument) | Bauer-Swanson MPS (SF Fed) | `.xlsx` | monthly / per-FOMC | as-published |
+| Narrative monetary shock | Romer-Romer, Breitenlechner (2018) update | `.dta` | quarterly (1969-2012) | as-published |
 
 Exact identifiers and URLs live in `cil.config` (`DataConfig`). Each raw pull is
 cached under `data/raw/<source>/` with a provenance record (source, URL,
@@ -103,6 +105,7 @@ uv run python -m cil.data.pipeline
 ```
 
 This builds, on real data, the analysis-ready tables in `data/cil.duckdb`:
-`macro_pit`, `macro_current`, `policy_rate`, `brw_shocks`, `ces_sae`,
-`qcew_cells`, `qcew_suppression`, `panel_cell`, `panel_dropped_cells`, and
-`provenance`. Cached raw payloads make re-runs incremental.
+`macro_pit`, `macro_current`, `policy_rate`, `brw_shocks`, `mps`, `mps_fomc`,
+`rr_shocks`, `ces_sae`, `qcew_cells`, `qcew_suppression`, `panel_cell`,
+`panel_dropped_cells`, and `provenance`. Cached raw payloads make re-runs
+incremental.

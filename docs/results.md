@@ -138,6 +138,42 @@ employment decline at the medium run but is imprecise, and the structural
 rate-response is weakly identified. It does not overturn or substitute for the
 headline relative design.
 
+**Tier 1.1 update — stronger instrument.** Replacing the BRW instrument with the
+Bauer-Swanson high-frequency surprise (SF Fed) strengthens the LP-IV first stage
+from robust F ~ 3-5 to **~13-15** at h = 0/12 (ADR-0013). Identification is now
+strong, but the point IRF becomes **wrong-signed at the medium run** (a
+price-puzzle-like `theta_12 > 0`) — an economically implausible result that
+*reinforces* treating the aggregate as an assumption-dependent complement rather
+than the answer. BRW is retained as a robustness variant.
+
+**Tier 1.2 update — narrative-shock complement.** A second, independent aggregate
+identification uses the updated Romer-Romer narrative shock (Breitenlechner 2018;
+quarterly, forecast-purged intended-funds-rate changes) in a quarterly employment
+LP (`rr_lp_irf`, ADR-0014). Here the response is **correctly signed** — employment
+turns negative from ~ 7 quarters and troughs near **-0.43% around 3-4 years** —
+but **imprecise**, with every HAC interval including zero. The two aggregate
+identifications therefore *disagree on sign* (HF wrong-signed, narrative
+right-signed but insignificant); the disagreement is the point — the aggregate is
+assumption-dependent, and the cleanly-identified relative design stays the
+headline.
+
+**Tier 1.3 update — high-frequency information effect.** The Jarocinski-Karadi
+test, run on the true announcement window (`mps_fomc` rate vs same-window S&P 500)
+rather than a monthly proxy, finds **32.5% of FOMC surprises are information-type**
+(105 / 323 events) — versus 52% for the monthly proxy of the same series, which is
+inflated by non-FOMC equity news (ADR-0015). The information effect is real but
+smaller than the proxy implied; a decontaminated instrument (`mps_clean`) is
+retained for robustness.
+
+**Tier 1.4 update — orthogonalized variant.** Instrumenting the LP-IV with the
+orthogonalized surprise `MPS_ORTH` (predictable/information variation removed)
+**flips the aggregate IRF to the theory-consistent negative sign** at every
+horizon (θ₁₂ = −0.63 vs the raw MPS's +4.03) — but the first stage collapses to
+F ≈ 1.6–2.8 (weak throughout). Removing the same information component flagged in
+1.3 corrects the price-puzzle sign, at the cost of identification (ADR-0016). The
+two instruments bracket the aggregate response — strong-but-contaminated vs
+clean-but-weak — so neither delivers a reliable aggregate point estimate.
+
 ## Heterogeneity via DML (Phase 6)
 
 Double/debiased ML (EconML) with **purged time-blocked cross-fitting** estimates

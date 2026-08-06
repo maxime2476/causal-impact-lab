@@ -88,10 +88,14 @@ Three monetary-shock series are built and compared (`cil.shocks`):
 
 Diagnostics reported (`info_effect`, `predictability`, `compare`):
 
-- **Information-effect test** (Jarocinski-Karadi, monthly proxy): classify each
-  surprise as policy vs. information by the sign co-movement of the shock with
-  broad equity returns; report the contamination share. The monthly proxy
-  overstates contamination relative to the high-frequency test.
+- **Information-effect test** (Jarocinski-Karadi): classify each surprise as
+  policy vs. information by the sign co-movement of the shock with equity returns;
+  report the contamination share. Two variants — a **monthly proxy** and, since
+  Tier 1.3, the true **high-frequency** test on the same-window `mps_fomc` rate
+  and S&P 500 moves (`classify_high_frequency`). The monthly proxy overstates
+  contamination (52% for MPS) relative to the HF window (33%, 105/323 events),
+  because month-long equity moves are dominated by non-FOMC news (ADR-0015). A
+  decontaminated instrument `mps_clean` (information events zeroed) is emitted.
 - **Predictability test** (Bauer-Swanson): regress the shock on lagged real-time
   predictors; report R-squared and the joint F p-value. A clean shock is
   unpredictable.
@@ -104,6 +108,27 @@ shows modest but significant predictability from the real-time information set
 stage is **weak** in the monthly effective-funds-rate configuration (robust
 F ≈ 0.7), which is reported, not hidden. The headline-shock choice is recorded
 in ADR-0004.
+
+### External shock series (Tier 1)
+
+Two purpose-built external series strengthen and cross-check identification:
+
+- **High-frequency instrument** — the Bauer-Swanson MPS (`cil.data.mps`; SF Fed)
+  replaces BRW as the headline LP-IV instrument. The first stage strengthens to
+  robust F ≈ 13–15 at h = 0/12 (vs BRW's ~3–5), though the resulting aggregate
+  IRF is wrong-signed at the medium run (ADR-0013).
+- **Narrative shock** — the updated Romer-Romer series (`cil.data.rr`;
+  Breitenlechner 2018) is a forecast-purged, non-market identification used in a
+  quarterly aggregate LP (`rr_lp_irf`); correctly signed but imprecise (ADR-0014).
+- **Orthogonalized variant** — the predictability-purged `MPS_ORTH` instruments a
+  fourth LP-IV (`lpiv_irf_orth`). It flips the aggregate IRF to the correct
+  negative sign but with a weak first stage (F ≈ 1.6–2.8), bracketing the raw MPS
+  from the clean-but-weak side (ADR-0016). A predictability comparison confirms
+  `MPS_ORTH` is only modestly less predictable from our real-time macro lags than
+  `MPS` (R² 0.058 vs 0.065), since it is orthogonalized to a different set.
+
+The aggregate identifications disagree on sign, which is itself the message: the
+aggregate response is assumption-dependent. See `docs/results.md`.
 
 ## Assumptions registry
 

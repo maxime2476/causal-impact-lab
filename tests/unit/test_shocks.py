@@ -107,6 +107,30 @@ def test_info_effect_counts_comovement() -> None:
     ]
 
 
+def test_info_effect_high_frequency_uses_same_window() -> None:
+    dates = _months(4)
+    fomc = pl.DataFrame(
+        {
+            "date": dates,
+            "mps": [1.0, 1.0, -1.0, -1.0],
+            "mps_orth": [0.0, 0.0, 0.0, 0.0],
+            "sp500": [2.0, -2.0, 3.0, -3.0],
+        }
+    )
+    classified, summary = info_effect.classify_high_frequency(fomc)
+    # Events 1 and 4 co-move (information); 2 and 3 are conventional policy.
+    assert summary.n_months == 4
+    assert summary.n_information == 2
+    assert summary.contamination_share == 0.5
+    # The monetary component zeroes out the information events.
+    assert classified.sort("date")["monetary_component"].to_list() == [
+        0.0,
+        1.0,
+        -1.0,
+        0.0,
+    ]
+
+
 def test_predictability_separates_signal_from_noise() -> None:
     rng = np.random.default_rng(2)
     n = 200
