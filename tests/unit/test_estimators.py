@@ -55,6 +55,46 @@ def test_panel_lp_recovers_injected_beta() -> None:
     assert abs(beta0 - beta_true) < 0.1
 
 
+def test_exposure_robust_same_beta_valid_se() -> None:
+    from cil.estimators.panel_lp import run_panel_lp_exposure_robust
+
+    rng = np.random.default_rng(3)
+    states = [f"{s:02d}" for s in range(1, 21)]
+    sectors = [f"10{k}" for k in range(11, 22)]
+    months = _months(48)
+    expo = dict(zip(sectors, np.linspace(-1.5, 1.5, 11), strict=True))
+    s_t = {m: rng.normal() for m in months}
+    tau = {m: rng.normal() * 0.5 for m in months}
+    beta_true = -0.8
+    rows = []
+    for st in states:
+        for k in sectors:
+            level = 0.0
+            for m in months:
+                level += beta_true * expo[k] * s_t[m] + tau[m] + rng.normal(0, 0.2)
+                rows.append((f"{st}_{k}", st, k, m, level))
+    panel = pl.DataFrame(
+        rows,
+        schema=["unit_id", "state_fips", "supersector_code", "date", "log_employment"],
+        orient="row",
+    )
+    exposure = pl.DataFrame(
+        {"supersector_code": list(expo), "exposure": list(expo.values())}
+    )
+    shock = pl.DataFrame({"date": months, "shock": [s_t[m] for m in months]})
+    cfg = PanelLPConfig(horizons=(0, 1))
+    dk = run_panel_lp(panel, exposure, shock, cfg, shock_col="shock")
+    er = run_panel_lp_exposure_robust(panel, exposure, shock, cfg, shock_col="shock")
+    # Clustering changes only the covariance, not the point estimate.
+    dk0 = dk.filter(pl.col("horizon") == 0)["beta"][0]
+    er0 = er.filter(pl.col("horizon") == 0)["beta"][0]
+    assert abs(dk0 - er0) < 1e-9
+    # The exposure-robust SE is a valid positive number and carries a BH column.
+    er_se0 = er.filter(pl.col("horizon") == 0)["se"][0]
+    assert er_se0 > 0 and np.isfinite(er_se0)
+    assert "p_value_bh" in er.columns
+
+
 def test_panel_lp_omits_reference_lead() -> None:
     rng = np.random.default_rng(1)
     months = _months(36)

@@ -46,6 +46,15 @@ finer panel is **markedly more credible**, though still a null in significance:
   marginal pre-trend that flagged the registered design is gone.
 - Magnitudes remain small and **not BH-significant**: a correctly-signed,
   well-behaved **null**, reported as such.
+- **Exposure-robust inference (Tier 2.1).** Two-way clustering on the supersector
+  (the shift-share exposure dimension, Borusyak-Hull-Jaravel 2022) **and** on time
+  gives standard errors essentially equal to Driscoll-Kraay (h=12 SE 0.049 vs
+  0.046; median ratio 1.07). The **decision-horizon null holds** (h=12/24 t ≈
+  −0.4/−0.2); only the short horizons h=2–3 cross BH-FDR (p ≈ 0.03, t ≈ −3.0), a
+  marginal early-horizon relative response distinct from the registered claim. The
+  decision-horizon null is thus not an artifact of the SE kernel. (Naive one-way
+  sector- or state-clustering understates the SE ~3× and would spuriously flip the
+  whole IRF to significant — a documented artifact, not a finding; ADR-0017.)
 
 This is a deliberate, disclosed deviation from the frozen plan (supersector →
 3-digit, ADR-0011); the registered supersector result below stands as the

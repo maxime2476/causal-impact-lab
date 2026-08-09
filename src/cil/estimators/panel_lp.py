@@ -70,22 +70,41 @@ def _prepare(
 
 
 def _fit_horizon(
-    prepared: pl.DataFrame, horizon: int, controls: list[str], confidence_level: float
+    prepared: pl.DataFrame,
+    horizon: int,
+    controls: list[str],
+    confidence_level: float,
+    *,
+    cluster_col: str | None = None,
 ) -> dict[str, float]:
-    """Estimate one horizon and return its coefficient row."""
+    """Estimate one horizon and return its coefficient row.
+
+    With ``cluster_col=None`` the covariance is Driscoll-Kraay (kernel), robust to
+    cross-sectional and serial correlation. With ``cluster_col`` set, the
+    covariance is **two-way clustered on that exposure dimension (supersector) and
+    on time** -- the exposure-robust choice for this shift-share design. The
+    sector dimension follows Borusyak-Hull-Jaravel (2022) (the shifter is common
+    to all units sharing a supersector); the *time* dimension is essential because
+    the aggregate shock ``s_t`` is common to every cell at ``t``, so naive one-way
+    sector clustering would ignore that within-time correlation and badly
+    understate the standard errors (see ADR-0017).
+    """
     outcome = (
         pl.col("log_employment").shift(-horizon) - pl.col("log_employment").shift(1)
     ).over("unit_id")
-    frame = (
-        prepared.with_columns(outcome=outcome)
-        .select(["unit_id", "date", "outcome", TREATMENT, *controls])
-        .drop_nulls()
-    )
+    keep = ["unit_id", "date", "outcome", TREATMENT, *controls]
+    if cluster_col is not None and cluster_col not in keep:
+        keep.append(cluster_col)
+    frame = prepared.with_columns(outcome=outcome).select(keep).drop_nulls()
     pdf = frame.to_pandas().set_index(["unit_id", "date"])
     exog = pdf[[TREATMENT, *controls]]
-    result = PanelOLS(pdf["outcome"], exog, entity_effects=True, time_effects=True).fit(
-        cov_type="kernel", kernel="bartlett"
-    )
+    model = PanelOLS(pdf["outcome"], exog, entity_effects=True, time_effects=True)
+    if cluster_col is None:
+        result = model.fit(cov_type="kernel", kernel="bartlett")
+    else:
+        clusters = pdf[[cluster_col]].copy()
+        clusters["_time"] = pdf.index.get_level_values("date")
+        result = model.fit(cov_type="clustered", clusters=clusters)
     beta = float(result.params[TREATMENT])
     se = float(result.std_errors[TREATMENT])
     z = float(norm.ppf(0.5 + confidence_level / 2.0))
@@ -141,6 +160,56 @@ def run_panel_lp(
         # is mechanically collinear with the lagged-difference controls, so
         # including them is degenerate. Response horizons keep the controls.
         _fit_horizon(prepared, h, controls if h >= 0 else [], config.confidence_level)
+        for h in config.horizons
+        if h != -1
+    ]
+    result = pl.DataFrame(rows).sort("horizon")
+    response = result.filter(pl.col("horizon") >= 0)
+    adjusted = bh_adjust(response["p_value"].to_numpy())
+    bh_map = dict(zip(response["horizon"].to_list(), adjusted.tolist(), strict=True))
+    return result.with_columns(
+        p_value_bh=pl.col("horizon").map_elements(
+            lambda h: bh_map.get(h, float("nan")), return_dtype=pl.Float64
+        )
+    )
+
+
+def run_panel_lp_exposure_robust(
+    panel: pl.DataFrame,
+    exposure: pl.DataFrame,
+    shock: pl.DataFrame,
+    config: PanelLPConfig,
+    *,
+    shock_col: str,
+    cluster_col: str = "supersector_code",
+) -> pl.DataFrame:
+    """Estimate the panel LP with **exposure-robust** (BHJ) standard errors.
+
+    Identical point estimates to :func:`run_panel_lp`, but the covariance is
+    two-way clustered on the exposure dimension (*cluster_col*, the supersector)
+    **and on time**. The sector dimension is the Borusyak-Hull-Jaravel (2022)
+    exposure-robust cluster (the shifter is common to units sharing a supersector;
+    Adao-Kolesar-Morales 2019 give an asymptotically equivalent variance); the
+    time dimension captures the common aggregate shock. In this design the two-way
+    SE lands very close to Driscoll-Kraay, whereas naive one-way sector clustering
+    would understate it ~3x (ADR-0017). Response horizons carry a BH-FDR column.
+
+    Returns
+    -------
+    polars.DataFrame
+        One row per horizon with the same columns as :func:`run_panel_lp`; the
+        ``se``/``t_stat``/``p_value``/CI reflect the two-way clustered covariance.
+    """
+    controls = [f"dy_l{lag}" for lag in range(1, config.n_control_lags + 1)]
+    prepared = _prepare(panel, exposure, shock, shock_col, config.n_control_lags)
+    rows = [
+        _fit_horizon(
+            prepared,
+            h,
+            controls if h >= 0 else [],
+            config.confidence_level,
+            cluster_col=cluster_col,
+        )
         for h in config.horizons
         if h != -1
     ]

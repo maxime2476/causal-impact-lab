@@ -25,6 +25,18 @@ Identification rests on **conditional parallel trends**: absent the shock, high-
 and low-exposure cells would have evolved in parallel, conditional on the fixed
 effects and controls. This is testable via the event-study leads (`h < 0`).
 
+**Inference.** The default band is Driscoll-Kraay (cross-sectional + serial
+robust). Because the exposure shifter is common to every cell in a supersector,
+the design is a shift-share, and Tier 2.1 adds the **exposure-robust** standard
+error (`run_panel_lp_exposure_robust`, table `panel_lp_exposure_robust`,
+ADR-0017): two-way clustered on the supersector — the Borusyak-Hull-Jaravel (2022)
+/ Adao-Kolesar-Morales (2019) exposure dimension — **and on time**, since the
+aggregate shock is common across cells within a month. The two-way band lands on
+top of Driscoll-Kraay (median SE ratio 1.07) and preserves the decision-horizon
+null (only the short horizons h=2–3 cross BH-FDR); naive one-way sector or state
+clustering understates the SE ~3× and is documented as a cautionary artifact, not
+reported as a result.
+
 ## Estimand 2 — aggregate dynamic effect (assumption-dependent, complement)
 
 Time-series local projection of national log employment on the shock:

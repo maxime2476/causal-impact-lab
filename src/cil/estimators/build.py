@@ -16,7 +16,12 @@ import polars as pl
 
 from cil.config import Settings, get_settings
 from cil.data.store import Store
-from cil.estimators.panel_lp import PanelLPConfig, leads_summary, run_panel_lp
+from cil.estimators.panel_lp import (
+    PanelLPConfig,
+    leads_summary,
+    run_panel_lp,
+    run_panel_lp_exposure_robust,
+)
 from cil.exposure import shift_share as ss
 
 _SHOCK_COL = "shock"
@@ -61,15 +66,36 @@ def build_estimates(settings: Settings | None = None) -> dict[str, float]:
         store.write_table("panel_lp_results", lp)
         leads = leads_summary(lp, settings.inference.fdr_alpha)
 
-        def _beta(h: int) -> float:
-            row = lp.filter(pl.col("horizon") == h)
-            return float(row["beta"][0]) if row.height else float("nan")
+        # Exposure-robust (BHJ) inference: cluster on the supersector exposure
+        # dimension. Same point estimates; typically wider bands.
+        lp_er = run_panel_lp_exposure_robust(
+            panel,
+            exposure,
+            shock,
+            PanelLPConfig(
+                horizons=horizons,
+                confidence_level=settings.inference.confidence_level,
+            ),
+            shock_col=_SHOCK_COL,
+        )
+        store.write_table("panel_lp_exposure_robust", lp_er)
+
+        def _col(frame: pl.DataFrame, col: str, h: int) -> float:
+            row = frame.filter(pl.col("horizon") == h)
+            return float(row[col][0]) if row.height else float("nan")
+
+        response_er = lp_er.filter(pl.col("horizon") >= 0)
+        er_pbh = response_er["p_value_bh"].to_numpy()
+        er_any_sig = float(bool((er_pbh <= settings.inference.fdr_alpha).any()))
 
         return {
-            "beta_h0": _beta(0),
-            "beta_h12": _beta(12),
-            "beta_h24": _beta(24),
+            "beta_h0": _col(lp, "beta", 0),
+            "beta_h12": _col(lp, "beta", 12),
+            "beta_h24": _col(lp, "beta", 24),
             "leads_any_significant": leads["any_significant"],
+            "se_h12_dk": _col(lp, "se", 12),
+            "se_h12_exposure_robust": _col(lp_er, "se", 12),
+            "exposure_robust_any_significant": er_any_sig,
         }
 
 
