@@ -291,5 +291,9 @@ identification; the divergent categories are documented (ADR-0012).
 
 - Inference: Driscoll-Kraay standard errors (cross-sectional + serial robust),
   with a wild-cluster-bootstrap cross-check; BH-FDR across horizons.
-- LP-DiD is implemented and validated on synthetic staggered panels but is not
-  the headline for a single national shock (no staggered timing); see ADR-0005.
+- LP-DiD is implemented with the horizon-dependent clean-control condition
+  (Dube-Girardi-Jordà-Taylor) and validated by a **known-DGP staggered golden**
+  that recovers a prescribed dynamic effect path to machine precision (Tier 2.2,
+  ADR-0018); a horizon-independent clean-control filter had been contaminating
+  `h ≥ 1` under staggered adoption. It remains a robustness estimator, not the
+  headline for a single national shock (no staggered timing); see ADR-0005.
