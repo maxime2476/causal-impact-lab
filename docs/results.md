@@ -70,6 +70,13 @@ ADR-0008):
 - **Bayesian** (`bayes_vs_freq`): the population IRF is negative at every horizon
   (μ_β −0.004/−0.018/−0.006), a shrunk version of the frequentist β_h — the two
   paradigms now **agree in sign** (both negative), where they disagreed before.
+- **Cell-level Bayesian** (Tier 2.3, `bayes_cell_summary`): a nested state ×
+  supersector hierarchy decomposes the response heterogeneity — at h=12,
+  τ_between = 0.061 vs τ_within = 0.002, a **between-share of 99.9%**. Almost all
+  cross-cell variation is *between supersectors*, essentially none *within a
+  supersector across states*: the relative response is an industry-composition
+  effect, confirming the shift-share premise from the data (ADR-0019). The
+  grand-mean response μ0 ≈ +0.02 is small, consistent with the aggregate null.
 - **Specification curve**: the median β is now **negative** at both decision
   horizons (h=12: −0.002, 50% of specs negative; h=24: −0.004, 67% negative),
   versus a positive-leaning minority in the registered window; still 0% BH-

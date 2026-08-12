@@ -12,10 +12,17 @@ Run as a module::
 
 from __future__ import annotations
 
+import numpy as np
 import polars as pl
 
 from cil.config import Settings, get_settings
 from cil.data.store import Store
+from cil.estimators.bayes_cell_lp import (
+    fit_cell_hierarchy,
+    per_cell_slopes,
+    sector_means,
+    summarize_cell,
+)
 from cil.estimators.bayes_lp import (
     fit_hierarchical_lp,
     posterior_predictive_check,
@@ -102,11 +109,44 @@ def build_bayesian(settings: Settings | None = None) -> dict[str, float]:
             )
             store.write_table("bayes_vs_freq", comparison)
 
+        # Cell-level (state x supersector) nested hierarchy at the primary horizon.
+        cell = per_cell_slopes(panel, shock, shock_col=_SHOCK_COL, horizon=_PRIMARY)
+        sectors = sorted(cell["supersector_code"].unique().to_list())
+        sector_code_to_idx = {c: i for i, c in enumerate(sectors)}
+        sector_idx = np.array(
+            [sector_code_to_idx[c] for c in cell["supersector_code"].to_list()],
+            dtype=int,
+        )
+        # The near-zero within-sector variance component funnels, so the cell
+        # fit gets more tuning / chains and a higher target_accept than the fast
+        # sufficient-statistics sector model.
+        cell_idata = fit_cell_hierarchy(
+            cell["beta_hat"].to_numpy().astype(float),
+            cell["se"].to_numpy().astype(float),
+            sector_idx,
+            len(sectors),
+            draws=1000,
+            tune=2000,
+            chains=4,
+            target_accept=0.98,
+            seed=settings.inference.seed,
+        )
+        cell_summary = summarize_cell(cell_idata, _PRIMARY, cell.height, len(sectors))
+        store.write_table(
+            "bayes_cell_summary", pl.DataFrame([cell_summary.model_dump()])
+        )
+        store.write_table("bayes_cell_sector", sector_means(cell_idata, sectors))
+
         mu_vals = prior_frame["mu_mean"].to_numpy()
         mu_spread = float(mu_vals.max() - mu_vals.min())
         result = {f"mu_beta_h{s.horizon}": s.mu_mean for s in summaries}
         result["max_rhat"] = max(s.max_rhat for s in summaries)
         result["prior_mu_spread_h12"] = mu_spread
+        result["cell_mu0_h12"] = cell_summary.mu0_mean
+        result["cell_tau_between_h12"] = cell_summary.tau_between
+        result["cell_tau_within_h12"] = cell_summary.tau_within
+        result["cell_between_share_h12"] = cell_summary.between_share
+        result["cell_max_rhat"] = cell_summary.max_rhat
         return result
 
 
