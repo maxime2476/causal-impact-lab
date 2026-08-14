@@ -77,6 +77,15 @@ ADR-0008):
   supersector across states*: the relative response is an industry-composition
   effect, confirming the shift-share premise from the data (ADR-0019). The
   grand-mean response μ0 ≈ +0.02 is small, consistent with the aggregate null.
+- **CausalForest drivers** (Tier 2.4, `cate_drivers`): a multi-feature causal
+  forest (effect modifiers: exposure, within-state share, cell size) finds **weak**
+  CATE heterogeneity. Driver strength is measured by the Best Linear Predictor of
+  the CATE on standardised modifiers — not impurity importances, which are
+  cardinality-biased (ADR-0020). All BLP coefficients are tiny (|coef| ≈
+  0.016–0.030 vs an ATE ≈ 0.026): cell size and within-state share are marginally
+  the strongest linear predictors, exposure the weakest (it is already inside the
+  treatment). No single economically-meaningful driver — consistent with the weak-
+  effect story.
 - **Specification curve**: the median β is now **negative** at both decision
   horizons (h=12: −0.002, 50% of specs negative; h=24: −0.004, 67% negative),
   versus a positive-leaning minority in the registered window; still 0% BH-

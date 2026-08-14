@@ -16,11 +16,12 @@ import polars as pl
 
 from cil.config import Settings, get_settings
 from cil.data.store import Store
-from cil.estimators.dml import estimate_heterogeneity
+from cil.estimators.dml import estimate_cate_drivers, estimate_heterogeneity
 from cil.exposure import shift_share as ss
 
 _SHOCK_COL = "shock"
 _HORIZONS = (0, 12, 24)
+_DRIVER_HORIZON = 12
 
 
 def build_heterogeneity(settings: Settings | None = None) -> dict[str, float]:
@@ -57,10 +58,39 @@ def build_heterogeneity(settings: Settings | None = None) -> dict[str, float]:
         store.write_table(
             "dml_results", pl.DataFrame([r.model_dump() for r in results])
         )
+
+        # CausalForest heterogeneity drivers (multi-feature X) at the primary
+        # horizon: which predetermined cell characteristics drive the CATE.
+        drivers = estimate_cate_drivers(
+            panel,
+            exposure,
+            shock,
+            shock_col=_SHOCK_COL,
+            horizon=_DRIVER_HORIZON,
+            seed=settings.inference.seed,
+        )
+        store.write_table(
+            "cate_drivers",
+            pl.DataFrame(
+                {
+                    "horizon": _DRIVER_HORIZON,
+                    "feature": drivers.features,
+                    "blp_coef": drivers.blp_coef,
+                    "importance": drivers.importances,
+                }
+            ),
+        )
+
         summary: dict[str, float] = {}
         for r in results:
             summary[f"linear_ate_h{r.horizon}"] = r.linear_ate
             summary[f"placebo_ate_h{r.horizon}"] = r.placebo_ate
+        top_idx = max(
+            range(len(drivers.importances)), key=lambda i: drivers.importances[i]
+        )
+        summary["cate_top_driver_importance"] = drivers.importances[top_idx]
+        summary["cate_top_exposure_tercile"] = drivers.cate_top_exposure_tercile
+        summary["cate_bottom_exposure_tercile"] = drivers.cate_bottom_exposure_tercile
         return summary
 
 
