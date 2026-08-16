@@ -55,6 +55,18 @@ finer panel is **markedly more credible**, though still a null in significance:
   decision-horizon null is thus not an artifact of the SE kernel. (Naive one-way
   sector- or state-clustering understates the SE ~3× and would spuriously flip the
   whole IRF to significant — a documented artifact, not a finding; ADR-0017.)
+- **Conley spatial inference (Tier 2.5).** A Conley space-time HAC (Bartlett
+  distance kernel across state centroids + Newey-West serial) adds the geographic
+  robustness axis. The SE is strongly cutoff-dependent (h=12: 0.009 at 200 km →
+  0.041 at a very wide cutoff): as the kernel admits full cross-sectional
+  dependence it **converges to Driscoll-Kraay (0.041 vs 0.046) and the null
+  holds** (also validating the implementation). A short 500 km cutoff gives a ~4×
+  tighter SE and apparent significance, but only by assuming correlation vanishes
+  beyond neighbouring states — false here, where the dominant dependence is by
+  *sector*, not distance (99.9% between-sector, ADR-0019). Reported via
+  `conley_cutoff_sensitivity` as a distance-decay artifact, not a result
+  (ADR-0021). The null survives serial, exposure-design and geographic robust
+  inference.
 
 This is a deliberate, disclosed deviation from the frozen plan (supersector →
 3-digit, ADR-0011); the registered supersector result below stands as the

@@ -18,8 +18,10 @@ from cil.config import Settings, get_settings
 from cil.data.store import Store
 from cil.estimators.panel_lp import (
     PanelLPConfig,
+    conley_cutoff_sensitivity,
     leads_summary,
     run_panel_lp,
+    run_panel_lp_conley,
     run_panel_lp_exposure_robust,
 )
 from cil.exposure import shift_share as ss
@@ -80,6 +82,37 @@ def build_estimates(settings: Settings | None = None) -> dict[str, float]:
         )
         store.write_table("panel_lp_exposure_robust", lp_er)
 
+        # Conley spatial + serial HAC inference: robust to geographic correlation
+        # between nearby states (500 km Bartlett kernel) plus serial correlation.
+        lp_conley = run_panel_lp_conley(
+            panel,
+            exposure,
+            shock,
+            PanelLPConfig(
+                horizons=horizons,
+                confidence_level=settings.inference.confidence_level,
+            ),
+            shock_col=_SHOCK_COL,
+        )
+        store.write_table("panel_lp_conley", lp_conley)
+
+        # Cutoff sensitivity at h=12: the Conley SE converges to Driscoll-Kraay as
+        # the spatial kernel widens, exposing the short-cutoff SE as a
+        # distance-decay artifact (ADR-0021).
+        conley_sens = conley_cutoff_sensitivity(
+            panel,
+            exposure,
+            shock,
+            PanelLPConfig(
+                horizons=horizons,
+                confidence_level=settings.inference.confidence_level,
+            ),
+            shock_col=_SHOCK_COL,
+            horizon=12,
+            cutoffs_km=(200.0, 500.0, 1000.0, 3000.0, 100000.0),
+        )
+        store.write_table("conley_cutoff_sensitivity", conley_sens)
+
         def _col(frame: pl.DataFrame, col: str, h: int) -> float:
             row = frame.filter(pl.col("horizon") == h)
             return float(row[col][0]) if row.height else float("nan")
@@ -88,6 +121,10 @@ def build_estimates(settings: Settings | None = None) -> dict[str, float]:
         er_pbh = response_er["p_value_bh"].to_numpy()
         er_any_sig = float(bool((er_pbh <= settings.inference.fdr_alpha).any()))
 
+        response_c = lp_conley.filter(pl.col("horizon") >= 0)
+        c_pbh = response_c["p_value_bh"].to_numpy()
+        conley_any_sig = float(bool((c_pbh <= settings.inference.fdr_alpha).any()))
+
         return {
             "beta_h0": _col(lp, "beta", 0),
             "beta_h12": _col(lp, "beta", 12),
@@ -95,7 +132,12 @@ def build_estimates(settings: Settings | None = None) -> dict[str, float]:
             "leads_any_significant": leads["any_significant"],
             "se_h12_dk": _col(lp, "se", 12),
             "se_h12_exposure_robust": _col(lp_er, "se", 12),
+            "se_h12_conley": _col(lp_conley, "se", 12),
+            "se_h12_conley_wide": float(
+                conley_sens.filter(pl.col("cutoff_km") >= 1e5)["se"].to_numpy()[0]
+            ),
             "exposure_robust_any_significant": er_any_sig,
+            "conley_any_significant": conley_any_sig,
         }
 
 

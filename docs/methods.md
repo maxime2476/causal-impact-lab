@@ -35,7 +35,12 @@ aggregate shock is common across cells within a month. The two-way band lands on
 top of Driscoll-Kraay (median SE ratio 1.07) and preserves the decision-horizon
 null (only the short horizons h=2–3 cross BH-FDR); naive one-way sector or state
 clustering understates the SE ~3× and is documented as a cautionary artifact, not
-reported as a result.
+reported as a result. Tier 2.5 adds a third axis — **Conley (1999) spatial +
+serial HAC** (`run_panel_lp_conley`, table `panel_lp_conley`, ADR-0021): robust to
+geographic correlation between nearby states. Its SE is cutoff-dependent and
+converges to Driscoll-Kraay as the kernel widens (so the null holds); a short
+cutoff understates by ignoring the sector dependence, exposed by
+`conley_cutoff_sensitivity`.
 
 ## Estimand 2 — aggregate dynamic effect (assumption-dependent, complement)
 
