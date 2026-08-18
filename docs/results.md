@@ -46,6 +46,27 @@ finer panel is **markedly more credible**, though still a null in significance:
   marginal pre-trend that flagged the registered design is gone.
 - Magnitudes remain small and **not BH-significant**: a correctly-signed,
   well-behaved **null**, reported as such.
+- **Exposure-robust inference (Tier 2.1).** Two-way clustering on the supersector
+  (the shift-share exposure dimension, Borusyak-Hull-Jaravel 2022) **and** on time
+  gives standard errors essentially equal to Driscoll-Kraay (h=12 SE 0.049 vs
+  0.046; median ratio 1.07). The **decision-horizon null holds** (h=12/24 t ≈
+  −0.4/−0.2); only the short horizons h=2–3 cross BH-FDR (p ≈ 0.03, t ≈ −3.0), a
+  marginal early-horizon relative response distinct from the registered claim. The
+  decision-horizon null is thus not an artifact of the SE kernel. (Naive one-way
+  sector- or state-clustering understates the SE ~3× and would spuriously flip the
+  whole IRF to significant — a documented artifact, not a finding; ADR-0017.)
+- **Conley spatial inference (Tier 2.5).** A Conley space-time HAC (Bartlett
+  distance kernel across state centroids + Newey-West serial) adds the geographic
+  robustness axis. The SE is strongly cutoff-dependent (h=12: 0.009 at 200 km →
+  0.041 at a very wide cutoff): as the kernel admits full cross-sectional
+  dependence it **converges to Driscoll-Kraay (0.041 vs 0.046) and the null
+  holds** (also validating the implementation). A short 500 km cutoff gives a ~4×
+  tighter SE and apparent significance, but only by assuming correlation vanishes
+  beyond neighbouring states — false here, where the dominant dependence is by
+  *sector*, not distance (99.9% between-sector, ADR-0019). Reported via
+  `conley_cutoff_sensitivity` as a distance-decay artifact, not a result
+  (ADR-0021). The null survives serial, exposure-design and geographic robust
+  inference.
 
 This is a deliberate, disclosed deviation from the frozen plan (supersector →
 3-digit, ADR-0011); the registered supersector result below stands as the
@@ -61,6 +82,22 @@ ADR-0008):
 - **Bayesian** (`bayes_vs_freq`): the population IRF is negative at every horizon
   (μ_β −0.004/−0.018/−0.006), a shrunk version of the frequentist β_h — the two
   paradigms now **agree in sign** (both negative), where they disagreed before.
+- **Cell-level Bayesian** (Tier 2.3, `bayes_cell_summary`): a nested state ×
+  supersector hierarchy decomposes the response heterogeneity — at h=12,
+  τ_between = 0.061 vs τ_within = 0.002, a **between-share of 99.9%**. Almost all
+  cross-cell variation is *between supersectors*, essentially none *within a
+  supersector across states*: the relative response is an industry-composition
+  effect, confirming the shift-share premise from the data (ADR-0019). The
+  grand-mean response μ0 ≈ +0.02 is small, consistent with the aggregate null.
+- **CausalForest drivers** (Tier 2.4, `cate_drivers`): a multi-feature causal
+  forest (effect modifiers: exposure, within-state share, cell size) finds **weak**
+  CATE heterogeneity. Driver strength is measured by the Best Linear Predictor of
+  the CATE on standardised modifiers — not impurity importances, which are
+  cardinality-biased (ADR-0020). All BLP coefficients are tiny (|coef| ≈
+  0.016–0.030 vs an ATE ≈ 0.026): cell size and within-state share are marginally
+  the strongest linear predictors, exposure the weakest (it is already inside the
+  treatment). No single economically-meaningful driver — consistent with the weak-
+  effect story.
 - **Specification curve**: the median β is now **negative** at both decision
   horizons (h=12: −0.002, 50% of specs negative; h=24: −0.004, 67% negative),
   versus a positive-leaning minority in the registered window; still 0% BH-
@@ -282,5 +319,9 @@ identification; the divergent categories are documented (ADR-0012).
 
 - Inference: Driscoll-Kraay standard errors (cross-sectional + serial robust),
   with a wild-cluster-bootstrap cross-check; BH-FDR across horizons.
-- LP-DiD is implemented and validated on synthetic staggered panels but is not
-  the headline for a single national shock (no staggered timing); see ADR-0005.
+- LP-DiD is implemented with the horizon-dependent clean-control condition
+  (Dube-Girardi-Jordà-Taylor) and validated by a **known-DGP staggered golden**
+  that recovers a prescribed dynamic effect path to machine precision (Tier 2.2,
+  ADR-0018); a horizon-independent clean-control filter had been contaminating
+  `h ≥ 1` under staggered adoption. It remains a robustness estimator, not the
+  headline for a single national shock (no staggered timing); see ADR-0005.

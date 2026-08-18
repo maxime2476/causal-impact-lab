@@ -18,14 +18,26 @@ Jorda (2005), AER 95(1).
 from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 from linearmodels.panel import PanelOLS
 from pydantic import BaseModel
 from scipy.stats import norm
 
 from cil.inference.bh_fdr import bh_adjust
+from cil.inference.conley import conley_regression_se
 
 TREATMENT = "treatment"
+
+_ConleyArrays = tuple[
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.int_],
+    npt.NDArray[np.int_],
+    npt.NDArray[np.int_],
+    list[str],
+]
 
 
 class PanelLPConfig(BaseModel):
@@ -70,22 +82,41 @@ def _prepare(
 
 
 def _fit_horizon(
-    prepared: pl.DataFrame, horizon: int, controls: list[str], confidence_level: float
+    prepared: pl.DataFrame,
+    horizon: int,
+    controls: list[str],
+    confidence_level: float,
+    *,
+    cluster_col: str | None = None,
 ) -> dict[str, float]:
-    """Estimate one horizon and return its coefficient row."""
+    """Estimate one horizon and return its coefficient row.
+
+    With ``cluster_col=None`` the covariance is Driscoll-Kraay (kernel), robust to
+    cross-sectional and serial correlation. With ``cluster_col`` set, the
+    covariance is **two-way clustered on that exposure dimension (supersector) and
+    on time** -- the exposure-robust choice for this shift-share design. The
+    sector dimension follows Borusyak-Hull-Jaravel (2022) (the shifter is common
+    to all units sharing a supersector); the *time* dimension is essential because
+    the aggregate shock ``s_t`` is common to every cell at ``t``, so naive one-way
+    sector clustering would ignore that within-time correlation and badly
+    understate the standard errors (see ADR-0017).
+    """
     outcome = (
         pl.col("log_employment").shift(-horizon) - pl.col("log_employment").shift(1)
     ).over("unit_id")
-    frame = (
-        prepared.with_columns(outcome=outcome)
-        .select(["unit_id", "date", "outcome", TREATMENT, *controls])
-        .drop_nulls()
-    )
+    keep = ["unit_id", "date", "outcome", TREATMENT, *controls]
+    if cluster_col is not None and cluster_col not in keep:
+        keep.append(cluster_col)
+    frame = prepared.with_columns(outcome=outcome).select(keep).drop_nulls()
     pdf = frame.to_pandas().set_index(["unit_id", "date"])
     exog = pdf[[TREATMENT, *controls]]
-    result = PanelOLS(pdf["outcome"], exog, entity_effects=True, time_effects=True).fit(
-        cov_type="kernel", kernel="bartlett"
-    )
+    model = PanelOLS(pdf["outcome"], exog, entity_effects=True, time_effects=True)
+    if cluster_col is None:
+        result = model.fit(cov_type="kernel", kernel="bartlett")
+    else:
+        clusters = pdf[[cluster_col]].copy()
+        clusters["_time"] = pdf.index.get_level_values("date")
+        result = model.fit(cov_type="clustered", clusters=clusters)
     beta = float(result.params[TREATMENT])
     se = float(result.std_errors[TREATMENT])
     z = float(norm.ppf(0.5 + confidence_level / 2.0))
@@ -144,6 +175,189 @@ def run_panel_lp(
         for h in config.horizons
         if h != -1
     ]
+    result = pl.DataFrame(rows).sort("horizon")
+    response = result.filter(pl.col("horizon") >= 0)
+    adjusted = bh_adjust(response["p_value"].to_numpy())
+    bh_map = dict(zip(response["horizon"].to_list(), adjusted.tolist(), strict=True))
+    return result.with_columns(
+        p_value_bh=pl.col("horizon").map_elements(
+            lambda h: bh_map.get(h, float("nan")), return_dtype=pl.Float64
+        )
+    )
+
+
+def run_panel_lp_exposure_robust(
+    panel: pl.DataFrame,
+    exposure: pl.DataFrame,
+    shock: pl.DataFrame,
+    config: PanelLPConfig,
+    *,
+    shock_col: str,
+    cluster_col: str = "supersector_code",
+) -> pl.DataFrame:
+    """Estimate the panel LP with **exposure-robust** (BHJ) standard errors.
+
+    Identical point estimates to :func:`run_panel_lp`, but the covariance is
+    two-way clustered on the exposure dimension (*cluster_col*, the supersector)
+    **and on time**. The sector dimension is the Borusyak-Hull-Jaravel (2022)
+    exposure-robust cluster (the shifter is common to units sharing a supersector;
+    Adao-Kolesar-Morales 2019 give an asymptotically equivalent variance); the
+    time dimension captures the common aggregate shock. In this design the two-way
+    SE lands very close to Driscoll-Kraay, whereas naive one-way sector clustering
+    would understate it ~3x (ADR-0017). Response horizons carry a BH-FDR column.
+
+    Returns
+    -------
+    polars.DataFrame
+        One row per horizon with the same columns as :func:`run_panel_lp`; the
+        ``se``/``t_stat``/``p_value``/CI reflect the two-way clustered covariance.
+    """
+    controls = [f"dy_l{lag}" for lag in range(1, config.n_control_lags + 1)]
+    prepared = _prepare(panel, exposure, shock, shock_col, config.n_control_lags)
+    rows = [
+        _fit_horizon(
+            prepared,
+            h,
+            controls if h >= 0 else [],
+            config.confidence_level,
+            cluster_col=cluster_col,
+        )
+        for h in config.horizons
+        if h != -1
+    ]
+    result = pl.DataFrame(rows).sort("horizon")
+    response = result.filter(pl.col("horizon") >= 0)
+    adjusted = bh_adjust(response["p_value"].to_numpy())
+    bh_map = dict(zip(response["horizon"].to_list(), adjusted.tolist(), strict=True))
+    return result.with_columns(
+        p_value_bh=pl.col("horizon").map_elements(
+            lambda h: bh_map.get(h, float("nan")), return_dtype=pl.Float64
+        )
+    )
+
+
+def _conley_arrays(
+    prepared: pl.DataFrame, horizon: int, use_controls: list[str]
+) -> tuple[_ConleyArrays, int]:
+    """Build the ``(y, treat, controls, cell, time, state, fips)`` Conley arrays."""
+    outcome = (
+        pl.col("log_employment").shift(-horizon) - pl.col("log_employment").shift(1)
+    ).over("unit_id")
+    frame = (
+        prepared.with_columns(outcome=outcome)
+        .select(["unit_id", "date", "state_fips", "outcome", TREATMENT, *use_controls])
+        .drop_nulls()
+    )
+    _, cell_idx = np.unique(frame["unit_id"].to_numpy(), return_inverse=True)
+    _, time_idx = np.unique(frame["date"].to_numpy(), return_inverse=True)
+    fips_order, state_idx = np.unique(
+        frame["state_fips"].to_numpy(), return_inverse=True
+    )
+    y = frame["outcome"].to_numpy().astype(np.float64)
+    treat = frame[TREATMENT].to_numpy().astype(np.float64)
+    ctrl = (
+        frame.select(use_controls).to_numpy().astype(np.float64)
+        if use_controls
+        else np.empty((frame.height, 0), dtype=np.float64)
+    )
+    arrays: _ConleyArrays = (
+        y,
+        treat,
+        ctrl,
+        cell_idx.ravel().astype(int),
+        time_idx.ravel().astype(int),
+        state_idx.ravel().astype(int),
+        [str(s) for s in fips_order.tolist()],
+    )
+    return arrays, frame.height
+
+
+def conley_cutoff_sensitivity(
+    panel: pl.DataFrame,
+    exposure: pl.DataFrame,
+    shock: pl.DataFrame,
+    config: PanelLPConfig,
+    *,
+    shock_col: str,
+    horizon: int,
+    cutoffs_km: tuple[float, ...],
+) -> pl.DataFrame:
+    """Conley SE at one horizon across spatial cutoffs (a robustness diagnostic).
+
+    As the cutoff widens the kernel approaches all-ones and the Conley SE
+    converges to the full cross-sectional-dependence (Driscoll-Kraay) value; a
+    short cutoff yields a tighter SE by assuming correlation vanishes with
+    distance. The spread exposes how much the "spatial" band depends on that
+    assumption (see ADR-0021).
+    """
+    controls = [f"dy_l{lag}" for lag in range(1, config.n_control_lags + 1)]
+    prepared = _prepare(panel, exposure, shock, shock_col, config.n_control_lags)
+    arrays, _ = _conley_arrays(prepared, horizon, controls if horizon >= 0 else [])
+    rows = []
+    for cutoff in cutoffs_km:
+        beta, se = conley_regression_se(
+            *arrays, cutoff_km=cutoff, time_bandwidth=abs(horizon) + 1
+        )
+        rows.append(
+            {
+                "cutoff_km": float(cutoff),
+                "beta": beta,
+                "se": se,
+                "t_stat": beta / se if se > 0 else float("nan"),
+            }
+        )
+    return pl.DataFrame(rows)
+
+
+def run_panel_lp_conley(
+    panel: pl.DataFrame,
+    exposure: pl.DataFrame,
+    shock: pl.DataFrame,
+    config: PanelLPConfig,
+    *,
+    shock_col: str,
+    cutoff_km: float = 500.0,
+) -> pl.DataFrame:
+    """Estimate the panel LP with **Conley spatial + serial HAC** standard errors.
+
+    Identical point estimates to :func:`run_panel_lp`, but the standard errors are
+    robust to spatial correlation between cells in nearby states (a Bartlett
+    distance kernel with radius *cutoff_km*) as well as serial correlation (a
+    Newey-West kernel of bandwidth ``h + 1``). Response horizons carry a BH-FDR
+    column.
+
+    Returns
+    -------
+    polars.DataFrame
+        One row per horizon with the same columns as :func:`run_panel_lp`; the
+        ``se``/``t_stat``/``p_value``/CI reflect the Conley covariance.
+    """
+    controls = [f"dy_l{lag}" for lag in range(1, config.n_control_lags + 1)]
+    prepared = _prepare(panel, exposure, shock, shock_col, config.n_control_lags)
+    z = float(norm.ppf(0.5 + config.confidence_level / 2.0))
+    rows: list[dict[str, float]] = []
+    for h in config.horizons:
+        if h == -1:
+            continue
+        arrays, n_obs = _conley_arrays(prepared, h, controls if h >= 0 else [])
+        beta, se = conley_regression_se(
+            *arrays, cutoff_km=cutoff_km, time_bandwidth=abs(h) + 1
+        )
+        p_value = (
+            float(2.0 * (1.0 - norm.cdf(abs(beta / se)))) if se > 0 else float("nan")
+        )
+        rows.append(
+            {
+                "horizon": float(h),
+                "beta": beta,
+                "se": se,
+                "t_stat": beta / se if se > 0 else float("nan"),
+                "p_value": p_value,
+                "ci_low": beta - z * se,
+                "ci_high": beta + z * se,
+                "n_obs": float(n_obs),
+            }
+        )
     result = pl.DataFrame(rows).sort("horizon")
     response = result.filter(pl.col("horizon") >= 0)
     adjusted = bh_adjust(response["p_value"].to_numpy())

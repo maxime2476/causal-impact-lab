@@ -143,7 +143,7 @@ addopts = "-ra --strict-markers --strict-config -m 'not integration'"
 testpaths = ["tests"]
 markers = [
     "integration: live external pulls; excluded from the default run (network).",
-    "golden: golden-fixture comparisons (e.g. LP-DiD vs Stata).",
+    "golden: golden-fixture comparisons against known-DGP / reference outputs.",
     "property: hypothesis-based property tests.",
 ]
 

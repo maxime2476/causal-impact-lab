@@ -1,15 +1,19 @@
 """LP-DiD: a local-projections difference-in-differences estimator.
 
 Implements the Dube-Girardi-Jorda-Taylor (2025) LP-DiD estimator with the
-clean-control condition: at each horizon the long-difference outcome is
-regressed on the treatment-change indicator, excluding already-treated units
-from the control pool so the two-way-FE negative-weighting problem
-(Goodman-Bacon 2021) does not arise.
+**horizon-dependent** clean-control condition: at each horizon the long-difference
+outcome is regressed on the treatment-change indicator, with the control pool
+restricted to units that stay untreated through the outcome window (``t+h``).
+Excluding both already-treated units *and* not-yet-treated controls that adopt
+inside the window avoids the two-way-FE negative-weighting problem
+(Goodman-Bacon 2021) and the horizon-dependent contamination bias it would
+otherwise induce under staggered adoption.
 
 There is no maintained Python implementation (the reference is Stata:
-github.com/danielegirardi/lpdid). This port is validated by analytic /
-two-way-FE equivalence on toy panels; a slot for Stata golden fixtures is left
-in ``tests/golden`` to drop in later.
+github.com/danielegirardi/lpdid). This port is validated by two-way-FE
+equivalence on a toy panel and by a **known-DGP staggered golden** that recovers a
+prescribed dynamic effect path to numerical precision (``tests/golden``,
+ADR-0018); a Stata cross-validation can be dropped in later.
 
 References
 ----------
@@ -45,10 +49,9 @@ class LPDiDConfig(BaseModel):
 def _prepare(
     data: pl.DataFrame, unit_col: str, time_col: str, treat_col: str, outcome_col: str
 ) -> pl.DataFrame:
-    """Add the treatment-change indicator and the already-treated flag."""
+    """Add the treatment-change indicator (0->1 switch = newly treated)."""
     return data.sort([unit_col, time_col]).with_columns(
         d_treat=(pl.col(treat_col) - pl.col(treat_col).shift(1)).over(unit_col),
-        already_treated=(pl.col(treat_col).shift(1) == 1).over(unit_col),
     )
 
 
@@ -58,16 +61,33 @@ def _fit_horizon(
     unit_col: str,
     time_col: str,
     outcome_col: str,
+    treat_col: str,
     confidence_level: float,
 ) -> dict[str, float]:
-    """Estimate the LP-DiD ATT at one horizon with clean controls."""
+    """Estimate the LP-DiD ATT at one horizon with horizon-dependent clean controls.
+
+    The clean-control condition is horizon-specific (Dube-Girardi-Jorda-Taylor):
+    the treated group is the units newly treated at ``t`` (``d_treat == 1``); a
+    clean control is a unit untreated at ``t`` that stays untreated through the
+    outcome window (``t+h`` for a response horizon). Controls that switch on
+    *inside* the window would contaminate the long difference, so they are
+    excluded here rather than by a horizon-independent already-treated filter.
+    (Absorbing / staggered adoption is assumed.)
+    """
     outcome = (pl.col(outcome_col).shift(-horizon) - pl.col(outcome_col).shift(1)).over(
         unit_col
     )
+    # Treatment status at the end of the outcome window (t+h). For leads (h < 0)
+    # the window is pre-event, so cleanliness only requires being untreated at t.
+    lead_treated = pl.col(treat_col).shift(-horizon).over(unit_col)
+    newly_treated = pl.col(D_TREAT) == 1
+    if horizon >= 0:
+        clean_control = (pl.col(treat_col) == 0) & (lead_treated == 0)
+    else:
+        clean_control = pl.col(treat_col) == 0
     frame = (
         prepared.with_columns(outcome=outcome)
-        # Clean-control condition: drop already-treated control rows.
-        .filter(~pl.col("already_treated").fill_null(value=False))
+        .filter(newly_treated | clean_control)
         .select([unit_col, time_col, "outcome", D_TREAT])
         .drop_nulls()
     )
@@ -117,7 +137,13 @@ def lp_did(
     prepared = _prepare(data, unit_col, time_col, treat_col, outcome_col)
     rows = [
         _fit_horizon(
-            prepared, h, unit_col, time_col, outcome_col, config.confidence_level
+            prepared,
+            h,
+            unit_col,
+            time_col,
+            outcome_col,
+            treat_col,
+            config.confidence_level,
         )
         for h in config.horizons
     ]
