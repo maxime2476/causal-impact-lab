@@ -102,7 +102,13 @@ ADR-0008):
   horizons (h=12: −0.002, 50% of specs negative; h=24: −0.004, 67% negative),
   versus a positive-leaning minority in the registered window; still 0% BH-
   significant.
-- **QCEW revision bound**: negligible (β ∈ [−0.021, −0.021]); **CES growth
+- **QCEW revision bound** (Tier 3.1): real state×industry vintages do not exist
+  (BLS archives none; ADR-0022), so a **benchmark-step** revision model — a
+  persistent per-cell/per-year level step calibrated to the QCEW-vs-CES growth
+  discrepancy (σ≈0.048) — bounds the coefficient. Under this conservative scale β
+  stays firmly negative, **[−0.025, −0.019]** around −0.021 (width 0.006), never
+  crossing zero. The old iid bound was ~9× tighter (0.0007) because independent
+  noise averages out — a falsely reassuring check now replaced. **CES growth
   correlation 0.92** validates the panel (Tier 0.3).
 
 **Net:** the power work (1994–2020, 3-digit) turns the headline from a

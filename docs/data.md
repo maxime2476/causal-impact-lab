@@ -41,8 +41,10 @@ The policy is **scoped, not uniform** (and is stated as such — see ADR-0002).
   historical vintage archive at state×industry granularity, and QCEW
   preliminary→final revisions are minor (near-census coverage). We use the
   final/revised values, documented here as a deliberate compromise — **not**
-  full PIT. A bounding robustness check on the period where state-level QCEW
-  vintages exist is planned for the robustness phase.
+  full PIT. Since no real vintages exist, Tier 3.1 bounds the headline with a
+  **benchmark-step revision model** calibrated to the QCEW-vs-CES growth
+  discrepancy (`cil.robustness.qcew_revision.correlated_revision_bound`,
+  ADR-0022): the coefficient stays firmly negative under conservative revisions.
 
 ## QCEW details
 

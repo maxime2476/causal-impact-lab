@@ -113,3 +113,39 @@ def test_qcew_revision_bound_contains_actual() -> None:
     )
     assert bound.beta_min <= bound.actual_beta <= bound.beta_max
     assert bound.beta_max >= bound.beta_min
+
+
+def test_correlated_revision_bound_contains_actual() -> None:
+    panel, exposure, shock = _panel()
+    bound = qcew_revision.correlated_revision_bound(
+        panel,
+        exposure,
+        shock,
+        shock_col="shock",
+        horizon=0,
+        sigma_bench=0.01,
+        sigma_idio=0.002,
+        n_draws=8,
+        seed=0,
+    )
+    assert bound.beta_min <= bound.actual_beta <= bound.beta_max
+    assert bound.beta_sd >= 0.0
+    assert bound.sigma_bench == 0.01
+
+
+def test_growth_discrepancy_sd_positive() -> None:
+    rng = np.random.default_rng(0)
+    months = [dt.date(2015 + i // 12, i % 12 + 1, 1) for i in range(30)]
+    rows_q, rows_c = [], []
+    for k in ("100", "200"):
+        base = 100.0
+        for m in months:
+            base *= 1.0 + rng.normal(0.0, 0.01)
+            rows_q.append(("01", k, m, base))
+            # CES differs from QCEW by a multiplicative growth wedge.
+            rows_c.append(("01", k, m, base * (1.0 + rng.normal(0.0, 0.02))))
+    schema = ["state_fips", "supersector_code", "date", "employment"]
+    qcew = pl.DataFrame(rows_q, schema=schema, orient="row")
+    ces = pl.DataFrame(rows_c, schema=schema, orient="row")
+    sd = qcew_revision.growth_discrepancy_sd(qcew, ces)
+    assert sd > 0.0 and np.isfinite(sd)

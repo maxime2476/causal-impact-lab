@@ -11,6 +11,7 @@ Run as a module::
 
 from __future__ import annotations
 
+import numpy as np
 import polars as pl
 
 from cil.config import Settings, get_settings
@@ -18,6 +19,7 @@ from cil.data.store import Store
 from cil.exposure import shift_share as ss
 from cil.robustness import breaks, covid, placebo, qcew_revision
 from cil.robustness import specification_curve as sc
+from cil.robustness.ces_reconciliation import aggregate_qcew_to_supersector
 from cil.robustness.placebo import PlaceboMode
 
 _PRIMARY = 12
@@ -111,7 +113,9 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
             ),
         )
 
-        # QCEW revision bound at the primary horizon.
+        # QCEW revision bound at the primary horizon. iid (reference) + the
+        # honest benchmark-step model, calibrated to the QCEW-vs-CES growth
+        # discrepancy (real vintages are unavailable; see ADR-0022).
         bound = qcew_revision.revision_bound(
             panel,
             exposures["estimated"],
@@ -122,6 +126,24 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
             seed=settings.inference.seed,
         )
         store.write_table("qcew_revision_bound", pl.DataFrame([bound.model_dump()]))
+
+        sigma_g = qcew_revision.growth_discrepancy_sd(
+            aggregate_qcew_to_supersector(cells),
+            store.read_table("ces_supersector"),
+        )
+        corr_bound = qcew_revision.correlated_revision_bound(
+            panel,
+            exposures["estimated"],
+            brw_shock,
+            shock_col="shock",
+            horizon=_PRIMARY,
+            sigma_bench=sigma_g / np.sqrt(2.0),
+            n_draws=40,
+            seed=settings.inference.seed,
+        )
+        store.write_table(
+            "qcew_revision_bound_correlated", pl.DataFrame([corr_bound.model_dump()])
+        )
 
         summ = sc.summarize_curve(curve)
         return {
@@ -135,6 +157,8 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
             "placebo_p_exposure": placebo_rows[1]["placebo_p_value"],
             "n_breaks": float(store.read_table("structural_breaks").height),
             "qcew_bound_width": bound.beta_max - bound.beta_min,
+            "qcew_bound_corr_width": corr_bound.beta_max - corr_bound.beta_min,
+            "qcew_bound_corr_sigma_bench": corr_bound.sigma_bench,
         }
 
 
