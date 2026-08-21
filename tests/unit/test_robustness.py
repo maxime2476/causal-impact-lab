@@ -81,6 +81,23 @@ def test_breaks_detects_mean_shift() -> None:
     assert any(abs(b - 60) <= 10 for b in idx)  # break near the true shift
 
 
+def test_bai_perron_full_selects_one_break_with_ci() -> None:
+    rng = np.random.default_rng(1)
+    series = np.concatenate([rng.normal(0, 0.3, 60), rng.normal(3.0, 0.3, 60)])
+    months = [dt.date(2000 + i // 12, i % 12 + 1, 1) for i in range(120)]
+    frame = pl.DataFrame({"date": months, "growth": series})
+    breaks_df, selection = breaks.bai_perron_full(
+        frame, "growth", max_breaks=4, min_size=12, n_boot=100, seed=0
+    )
+    # BIC selects exactly one break, near the true shift, with a bracketing CI.
+    assert int(selection.filter(pl.col("selected"))["n_breaks"][0]) == 1
+    assert breaks_df.height == 1
+    bd = breaks_df["break_date"][0]
+    assert dt.date(2004, 7, 1) <= bd <= dt.date(2005, 7, 1)
+    assert breaks_df["ci_low_date"][0] <= bd <= breaks_df["ci_high_date"][0]
+    assert abs(float(breaks_df["delta"][0]) - 3.0) < 0.5
+
+
 def test_covid_exclude_and_state_dependent() -> None:
     months = [dt.date(2019 + i // 12, i % 12 + 1, 1) for i in range(24)]
     frame = pl.DataFrame({"date": months, "x": range(24)})

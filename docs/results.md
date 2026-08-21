@@ -283,9 +283,15 @@ is significant in essentially none -- the relative effect is **not robust**.
 null (p = 0.17; placebo mean ~ 0); permuting exposure flags the (wrong-signed)
 estimate as somewhat extreme (p = 0.04). No evidence of a robust negative effect.
 
-**Structural breaks** (Bai-Perron on national employment growth): breaks around
-the WWII demobilization and, recently, 2019, **2020-05 (COVID)**, and 2021 -- the
-pandemic is the dominant recent break.
+**Structural breaks** (full Bai-Perron on national employment growth, 1994-2020;
+Tier 3.2): exact dynamic-programming segmentation with **BIC selection chooses
+zero breaks** — the SSR reduction from adding breaks does not justify the extra
+parameters. There is no statistically warranted mean-regime shift over the study
+period; the relationship is stable. The 2020 COVID collapse-and-rebound is a
+*transient spike*, not a persistent break, and is handled by the state-dependent
+LP, not the break test (ADR-0023). The earlier PELT diagnostic, run on the full
+1939+ history at a fixed penalty, flagged penalty-dependent breaks; the principled
+BIC procedure on the study window supersedes it.
 
 **COVID / state-dependence** (Auerbach-Gorodnichenko aggregate LP): the
 **expansion-state** response is negative at the medium run (theta_12 = -3.0),

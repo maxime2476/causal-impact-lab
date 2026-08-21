@@ -82,17 +82,24 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
         ]
         store.write_table("placebo_results", pl.DataFrame(placebo_rows))
 
-        # Bai-Perron breaks on national employment growth.
+        # Bai-Perron breaks on national employment growth, over the analysis
+        # window (breaks within the study period are the relevant diagnostic).
         national = (
             macro.filter(
-                pl.col("series_id") == settings.data.series.national_employment
+                (pl.col("series_id") == settings.data.series.national_employment)
+                & (pl.col("reference_date") >= settings.data.sample.start)
+                & (pl.col("reference_date") <= settings.data.sample.end)
             )
             .select(date="reference_date", level=pl.col("value"))
             .sort("date")
             .with_columns(growth=pl.col("level").log().diff() * 100.0)
             .drop_nulls()
         )
-        store.write_table("structural_breaks", breaks.bai_perron(national, "growth"))
+        breaks_df, break_selection = breaks.bai_perron_full(
+            national, "growth", seed=settings.inference.seed
+        )
+        store.write_table("structural_breaks", breaks_df)
+        store.write_table("break_selection", break_selection)
 
         # COVID state-dependent aggregate LP.
         employment = macro.filter(
