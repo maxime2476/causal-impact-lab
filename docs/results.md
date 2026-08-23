@@ -337,3 +337,11 @@ identification; the divergent categories are documented (ADR-0012).
   ADR-0018); a horizon-independent clean-control filter had been contaminating
   `h ≥ 1` under staggered adoption. It remains a robustness estimator, not the
   headline for a single national shock (no staggered timing); see ADR-0005.
+- **Full Goodman-Bacon decomposition** (Tier 3.3): on a staggered treatment
+  constructed from the exposure design (cells adopt when exposure-weighted
+  cumulative tightening crosses a threshold), the decomposition reproduces TWFE
+  exactly (identity gap 4e-14) and shows **~38% of the TWFE weight falls on
+  forbidden later-vs-already-treated comparisons**, which pull the estimate the
+  opposite way from the clean comparisons. A naive staggered TWFE would be
+  materially contaminated — quantifying why the headline uses the clean
+  LP/interaction and clean-control LP-DiD designs, which avoid it (ADR-0024).
