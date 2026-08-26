@@ -47,6 +47,13 @@ def _data_stage(settings: Settings) -> Mapping[str, float]:
     return {key: float(value) for key, value in pipeline.run(settings).items()}
 
 
+def _data_refresh_stage(settings: Settings) -> Mapping[str, float]:
+    return {
+        key: float(value)
+        for key, value in pipeline.run(settings, force_refresh=True).items()
+    }
+
+
 def _aggregate_stage(settings: Settings) -> Mapping[str, float]:
     return {
         **aggregate.build_aggregate_irf(settings),
@@ -129,6 +136,11 @@ def main() -> None:
         help="Comma-separated subset of stages to run (default: all).",
     )
     parser.add_argument("--list", action="store_true", help="List the stages and exit.")
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Re-fetch raw data in the data stage (refresh path) instead of cache.",
+    )
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
@@ -138,7 +150,8 @@ def main() -> None:
             print(name)
         return
     stages = args.stages.split(",") if args.stages else None
-    results = run_all(stages=stages)
+    registry = {**STAGES, "data": _data_refresh_stage} if args.refresh else None
+    results = run_all(stages=stages, stage_map=registry)
     total = sum(stage["seconds"] for stage in results.values())
     for name, stage in results.items():
         print(f"{name}: {stage['seconds']:.1f}s")
