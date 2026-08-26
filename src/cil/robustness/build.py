@@ -82,6 +82,19 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
         ]
         store.write_table("placebo_results", pl.DataFrame(placebo_rows))
 
+        # Randomization inference: circular-shift the shock (preserves its serial
+        # dependence) and re-estimate; per-horizon + joint max|beta| p-values.
+        ri_frame, ri_joint_p = placebo.circular_shift_ri(
+            panel,
+            exposures["estimated"],
+            brw_shock,
+            shock_col="shock",
+            horizons=(0, 12, 24),
+            n_draws=200,
+            seed=settings.inference.seed,
+        )
+        store.write_table("randomization_inference", ri_frame)
+
         # Bai-Perron breaks on national employment growth, over the analysis
         # window (breaks within the study period are the relevant diagnostic).
         national = (
@@ -166,6 +179,10 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
             "qcew_bound_width": bound.beta_max - bound.beta_min,
             "qcew_bound_corr_width": corr_bound.beta_max - corr_bound.beta_min,
             "qcew_bound_corr_sigma_bench": corr_bound.sigma_bench,
+            "ri_joint_p_value": ri_joint_p,
+            "ri_p_value_h12": float(
+                ri_frame.filter(pl.col("horizon") == 12)["ri_p_value"][0]
+            ),
         }
 
 

@@ -1,9 +1,15 @@
-"""Placebo / permutation tests for the headline relative effect.
+"""Placebo / permutation and randomization-inference tests.
 
-Two randomizations that should yield a null: permuting the shock across time
-(breaking the timing) and permuting exposure across supersectors (breaking the
-cross-sectional assignment). A non-null placebo is a red flag to investigate, not
-to hide.
+Placebo permutations (:func:`permutation_test`): permuting the shock across time
+or exposure across supersectors, which should yield a null. **iid** permutation of
+the shock, however, destroys its serial correlation, so its placebo distribution
+does not respect the design.
+
+Randomization inference (:func:`circular_shift_ri`): the design-respecting test
+for a serially-correlated time-series treatment. Circularly shifting the shock by
+a random offset preserves its autocovariance exactly while breaking its alignment
+with the outcomes, giving a valid sharp-null distribution. Reports per-horizon RI
+p-values and a joint ``max|beta|`` p-value (family-wise across horizons).
 """
 
 from __future__ import annotations
@@ -115,3 +121,81 @@ def permutation_test(
         n_permutations=n_permutations,
         placebo_mean=float(draws.mean()),
     )
+
+
+def circular_shift_ri(
+    panel: pl.DataFrame,
+    exposure: pl.DataFrame,
+    shock: pl.DataFrame,
+    *,
+    shock_col: str,
+    horizons: tuple[int, ...],
+    n_draws: int = 200,
+    seed: int = 20260101,
+) -> tuple[pl.DataFrame, float]:
+    """Circular-shift randomization inference for the headline coefficient.
+
+    Each draw circularly shifts the (date-sorted) shock by a random offset,
+    preserving its autocovariance, and re-estimates the panel LP at *horizons*.
+    Returns per-horizon RI p-values and the joint ``max|beta|`` p-value.
+
+    Parameters
+    ----------
+    panel, exposure, shock
+        Headline inputs.
+    shock_col
+        Name of the shock column.
+    horizons
+        Response horizons to test jointly.
+    n_draws
+        Number of circular shifts.
+    seed
+        Random seed.
+
+    Returns
+    -------
+    per_horizon : polars.DataFrame
+        ``horizon``, ``actual_beta``, ``ri_p_value``, ``ri_mean``.
+    joint_p_value : float
+        RI p-value for the ``max|beta|`` statistic across *horizons*.
+    """
+    rng = np.random.default_rng(seed)
+    config = PanelLPConfig(horizons=horizons)
+    ordered = shock.sort("date")
+    values = ordered[shock_col].to_numpy()
+    n_t = values.shape[0]
+
+    actual = run_panel_lp(panel, exposure, ordered, config, shock_col=shock_col)
+    actual_beta = {
+        int(h): float(actual.filter(pl.col("horizon") == h)["beta"][0])
+        for h in horizons
+    }
+    draw_beta: dict[int, list[float]] = {int(h): [] for h in horizons}
+    draw_max: list[float] = []
+    for _ in range(n_draws):
+        shift = int(rng.integers(1, n_t))
+        shifted = ordered.with_columns(pl.Series(shock_col, np.roll(values, shift)))
+        res = run_panel_lp(panel, exposure, shifted, config, shock_col=shock_col)
+        betas = {
+            int(h): float(res.filter(pl.col("horizon") == h)["beta"][0])
+            for h in horizons
+        }
+        for h in horizons:
+            draw_beta[int(h)].append(betas[int(h)])
+        draw_max.append(max(abs(b) for b in betas.values()))
+
+    rows = []
+    for h in horizons:
+        d = np.abs(np.asarray(draw_beta[int(h)]))
+        a = abs(actual_beta[int(h)])
+        rows.append(
+            {
+                "horizon": int(h),
+                "actual_beta": actual_beta[int(h)],
+                "ri_p_value": (1 + int(np.sum(d >= a))) / (n_draws + 1),
+                "ri_mean": float(np.mean(draw_beta[int(h)])),
+            }
+        )
+    actual_max = max(abs(v) for v in actual_beta.values())
+    joint_p = (1 + int(np.sum(np.asarray(draw_max) >= actual_max))) / (n_draws + 1)
+    return pl.DataFrame(rows), joint_p

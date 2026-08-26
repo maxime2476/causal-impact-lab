@@ -74,6 +74,24 @@ def test_placebo_collapses() -> None:
     assert 0.0 < res.placebo_p_value <= 1.0
 
 
+def test_circular_shift_ri_detects_effect_and_preserves_autocov() -> None:
+    panel, exposure, shock = _panel(beta=-0.8)
+    # Circular shift preserves the shock's autocovariance (same multiset of values).
+    vals = shock.sort("date")["shock"].to_numpy()
+    rolled = np.roll(vals, 7)
+    assert np.isclose(np.var(vals), np.var(rolled))
+    assert np.isclose(sorted(vals), sorted(rolled)).all()
+
+    frame, joint_p = placebo.circular_shift_ri(
+        panel, exposure, shock, shock_col="shock", horizons=(0, 12), n_draws=50, seed=0
+    )
+    assert set(frame["horizon"].to_list()) == {0, 12}
+    assert (frame["ri_p_value"] > 0).all() and (frame["ri_p_value"] <= 1).all()
+    assert 0.0 < joint_p <= 1.0
+    # The strong injected effect at h=0 is detected (small RI p-value).
+    assert float(frame.filter(pl.col("horizon") == 0)["ri_p_value"][0]) < 0.1
+
+
 def test_breaks_detects_mean_shift() -> None:
     rng = np.random.default_rng(0)
     series = np.concatenate([rng.normal(0, 0.3, 60), rng.normal(3.0, 0.3, 60)])

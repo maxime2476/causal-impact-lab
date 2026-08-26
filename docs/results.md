@@ -283,6 +283,14 @@ is significant in essentially none -- the relative effect is **not robust**.
 null (p = 0.17; placebo mean ~ 0); permuting exposure flags the (wrong-signed)
 estimate as somewhat extreme (p = 0.04). No evidence of a robust negative effect.
 
+**Randomization inference** (Tier 3.4): the iid shock permutation destroys the
+shock's serial dependence, so the valid design-based test **circularly shifts**
+the shock (preserving its autocovariance) and re-estimates. On the 3-digit panel
+the RI p-values are 0.06 (h=0, borderline), 0.65 (h=12) and 0.84 (h=24), and the
+**joint `max|β|` family-wise p-value is 0.78** — the sharp null is not rejected.
+The randomization distribution is centred on zero. The decision-horizon null thus
+survives a design-valid randomization test (ADR-0025).
+
 **Structural breaks** (full Bai-Perron on national employment growth, 1994-2020;
 Tier 3.2): exact dynamic-programming segmentation with **BIC selection chooses
 zero breaks** — the SSR reduction from adding breaks does not justify the extra
