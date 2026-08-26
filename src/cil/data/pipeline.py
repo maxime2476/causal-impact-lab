@@ -9,8 +9,10 @@ Run as a module to build everything on real data::
 
     uv run python -m cil.data.pipeline
 
-The refresh (incremental) path is intentionally not implemented here; it must
-never read data dated after its reference date for the strict-PIT series.
+The **refresh** (incremental) path is available via ``run(force_refresh=True)`` /
+``--refresh``: it re-fetches raw payloads to pick up new releases (QCEW only its
+two most recent years) while staying PIT-safe — it never reads data dated after
+its reference date for the strict-PIT series (ADR-0027).
 """
 
 from __future__ import annotations
@@ -50,6 +52,7 @@ def _cache_or_fetch(
     fetch_fn: FetchFn,
     *,
     vintage_date: dt.date | None = None,
+    force_refresh: bool = False,
 ) -> bytes:
     """Return cached raw bytes if present, else fetch, cache, and record them.
 
@@ -67,6 +70,11 @@ def _cache_or_fetch(
         Zero-argument callable returning ``(content, url, params)``.
     vintage_date
         Vintage date for point-in-time sources.
+    force_refresh
+        Re-fetch (and overwrite the cache) even when a cached payload exists —
+        the *refresh* path, used to pull newly released data. PIT integrity is
+        preserved: the strict-PIT series still record every observation's vintage
+        and reconstruct via ``as_of`` with no look-ahead (see ADR-0027).
 
     Returns
     -------
@@ -74,7 +82,7 @@ def _cache_or_fetch(
         The raw payload.
     """
     cached = data_dir / "raw" / source / filename
-    if cached.exists():
+    if cached.exists() and not force_refresh:
         prov = load_provenance(data_dir, source, filename)
         if prov is not None:
             store.record_provenance(prov)
@@ -93,7 +101,13 @@ def _cache_or_fetch(
     return content
 
 
-def ingest_macro(settings: Settings, store: Store, client: httpx.Client) -> int:
+def ingest_macro(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
     """Ingest ALFRED point-in-time macro series; return the PIT row count."""
     if settings.fred_api_key is None:
         msg = "CIL_FRED_API_KEY is required for ALFRED ingestion."
@@ -113,6 +127,7 @@ def ingest_macro(settings: Settings, store: Store, client: httpx.Client) -> int:
                 api_key,
                 series_id,
             ),
+            force_refresh=force_refresh,
         )
         pit_frames.append(alfred.parse_pit(content, series_id))
     pit = pl.concat(pit_frames)
@@ -130,13 +145,22 @@ def _quarters(start: dt.date, end: dt.date) -> list[tuple[int, int]]:
     return pairs
 
 
-def ingest_qcew(settings: Settings, store: Store, client: httpx.Client) -> int:
+def ingest_qcew(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
     """Ingest QCEW cells (bulk flat files) and the suppression footprint.
 
     Uses the annual ``by_area`` bulk zips uniformly across the sample (one
     download per year, cached), at the configured aggregation level. This
     extends history before the API's 2014 floor and supports any NAICS level
     (e.g. supersector or 3-digit) from the same cached zips.
+
+    On a refresh only the most recent two years are re-fetched (QCEW revises the
+    latest quarters); older years' large zips stay cached.
     """
     qcfg = settings.data.qcew
     start_year = max(qcfg.bulk_min_year, settings.data.sample.start.year)
@@ -154,6 +178,7 @@ def ingest_qcew(settings: Settings, store: Store, client: httpx.Client) -> int:
                 settings.data.urls.qcew_bulk_template,
                 year,
             ),
+            force_refresh=force_refresh and year >= end_year - 1,
         )
         frames.append(
             qcew_bulk.parse_year(
@@ -173,7 +198,13 @@ def ingest_qcew(settings: Settings, store: Store, client: httpx.Client) -> int:
     return cells.height
 
 
-def ingest_wuxia(settings: Settings, store: Store, client: httpx.Client) -> int:
+def ingest_wuxia(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
     """Ingest the Wu-Xia spliced policy rate; return the row count."""
     content = _cache_or_fetch(
         store,
@@ -181,6 +212,7 @@ def ingest_wuxia(settings: Settings, store: Store, client: httpx.Client) -> int:
         "wuxia",
         "WuXiaShadowRate.xlsx",
         lambda: wuxia.fetch_raw(client, settings.data.urls.wuxia_xlsx),
+        force_refresh=force_refresh,
     )
     spliced = wuxia.splice(
         wuxia.parse(content),
@@ -191,7 +223,13 @@ def ingest_wuxia(settings: Settings, store: Store, client: httpx.Client) -> int:
     return spliced.height
 
 
-def ingest_brw(settings: Settings, store: Store, client: httpx.Client) -> int:
+def ingest_brw(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
     """Ingest the Bu-Rogers-Wu shock series; return the row count."""
     content = _cache_or_fetch(
         store,
@@ -199,13 +237,20 @@ def ingest_brw(settings: Settings, store: Store, client: httpx.Client) -> int:
         "brw",
         "brw-shock-series.csv",
         lambda: brw.fetch_raw(client, settings.data.urls.brw_csv),
+        force_refresh=force_refresh,
     )
     shocks = brw.parse(content)
     store.write_table("brw_shocks", shocks)
     return shocks.height
 
 
-def ingest_mps(settings: Settings, store: Store, client: httpx.Client) -> int:
+def ingest_mps(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
     """Ingest the Bauer-Swanson HF surprises (monthly + FOMC); return row count."""
     content = _cache_or_fetch(
         store,
@@ -213,6 +258,7 @@ def ingest_mps(settings: Settings, store: Store, client: httpx.Client) -> int:
         "mps",
         "monetary-policy-surprises.xlsx",
         lambda: mps.fetch_raw(client, settings.data.urls.mps_xlsx),
+        force_refresh=force_refresh,
     )
     monthly = mps.parse_monthly(content)
     store.write_table("mps", monthly)
@@ -220,7 +266,13 @@ def ingest_mps(settings: Settings, store: Store, client: httpx.Client) -> int:
     return monthly.height
 
 
-def ingest_rr(settings: Settings, store: Store, client: httpx.Client) -> int:
+def ingest_rr(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
     """Ingest the updated Romer-Romer narrative shocks (quarterly); return rows."""
     content = _cache_or_fetch(
         store,
@@ -228,13 +280,20 @@ def ingest_rr(settings: Settings, store: Store, client: httpx.Client) -> int:
         "rr",
         "UpdateRR04shocks.dta",
         lambda: rr.fetch_raw(client, settings.data.urls.rr_shocks_dta),
+        force_refresh=force_refresh,
     )
     shocks = rr.parse(content)
     store.write_table("rr_shocks", shocks)
     return shocks.height
 
 
-def ingest_ces(settings: Settings, store: Store, client: httpx.Client) -> int:
+def ingest_ces(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
     """Ingest CES-SAE state total-nonfarm cross-check; return the row count."""
     if settings.fred_api_key is None:
         msg = "CIL_FRED_API_KEY is required for CES-SAE ingestion."
@@ -254,6 +313,7 @@ def ingest_ces(settings: Settings, store: Store, client: httpx.Client) -> int:
                 api_key,
                 abbr,
             ),
+            force_refresh=force_refresh,
         )
         frames.append(ces_sae.parse_state(content, state_fips))
     ces = pl.concat(frames).sort(["state_fips", "date"])
@@ -280,22 +340,42 @@ def build_panels(settings: Settings, store: Store) -> tuple[int, int]:
     return panel_df.height, dropped.height
 
 
-def run(settings: Settings | None = None) -> dict[str, int]:
-    """Run the full backfill and panel assembly. Returns a counts summary."""
+def run(
+    settings: Settings | None = None, *, force_refresh: bool = False
+) -> dict[str, int]:
+    """Run data ingestion and panel assembly. Returns a counts summary.
+
+    Parameters
+    ----------
+    settings
+        Project settings.
+    force_refresh
+        The **refresh path**: re-fetch raw payloads (updating the cache) to pick
+        up newly released data, instead of reusing the cache (the *backfill*
+        path). QCEW re-fetches only its two most recent years; strict-PIT series
+        remain PIT-safe (ADR-0027).
+    """
     settings = settings or get_settings()
     client = http.build_client(
         settings.data.contact_email, settings.data.request_timeout_seconds
     )
     summary: dict[str, int] = {}
+    fr = force_refresh
     try:
         with Store(settings.paths.store_path) as store:
-            summary["macro_pit_rows"] = ingest_macro(settings, store, client)
-            summary["wuxia_rows"] = ingest_wuxia(settings, store, client)
-            summary["brw_rows"] = ingest_brw(settings, store, client)
-            summary["mps_rows"] = ingest_mps(settings, store, client)
-            summary["rr_rows"] = ingest_rr(settings, store, client)
-            summary["ces_rows"] = ingest_ces(settings, store, client)
-            summary["qcew_cells"] = ingest_qcew(settings, store, client)
+            summary["macro_pit_rows"] = ingest_macro(
+                settings, store, client, force_refresh=fr
+            )
+            summary["wuxia_rows"] = ingest_wuxia(
+                settings, store, client, force_refresh=fr
+            )
+            summary["brw_rows"] = ingest_brw(settings, store, client, force_refresh=fr)
+            summary["mps_rows"] = ingest_mps(settings, store, client, force_refresh=fr)
+            summary["rr_rows"] = ingest_rr(settings, store, client, force_refresh=fr)
+            summary["ces_rows"] = ingest_ces(settings, store, client, force_refresh=fr)
+            summary["qcew_cells"] = ingest_qcew(
+                settings, store, client, force_refresh=fr
+            )
             n_panel, n_dropped = build_panels(settings, store)
             summary["panel_rows"] = n_panel
             summary["dropped_cells"] = n_dropped
@@ -305,8 +385,21 @@ def run(settings: Settings | None = None) -> dict[str, int]:
 
 
 def main() -> None:
-    """Run the backfill and print a counts summary (module entry point)."""
-    summary = run()
+    """Run the pipeline and print a counts summary (module entry point).
+
+    ``--refresh`` re-fetches raw data (the refresh path) instead of the cached
+    backfill.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Build the analysis tables.")
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Re-fetch raw data to pick up new releases (refresh path).",
+    )
+    args = parser.parse_args()
+    summary = run(force_refresh=args.refresh)
     for key, value in summary.items():
         print(f"{key}: {value}")
 

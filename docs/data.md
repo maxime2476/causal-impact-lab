@@ -111,3 +111,27 @@ This builds, on real data, the analysis-ready tables in `data/cil.duckdb`:
 `rr_shocks`, `ces_sae`, `qcew_cells`, `qcew_suppression`, `panel_cell`,
 `panel_dropped_cells`, and `provenance`. Cached raw payloads make re-runs
 incremental.
+
+## Reproducing the whole study
+
+The full DAG — data, CES reconciliation, shocks, aggregate IRFs, headline
+estimators, DML, Bayesian, robustness, and the app-asset export — runs in
+dependency order from a single entry point (`cil.orchestrate`, ADR-0026):
+
+```bash
+uv run python -m cil.orchestrate            # the whole DAG, timed per stage
+uv run python -m cil.orchestrate --list     # list the stages
+uv run python -m cil.orchestrate --stages robustness   # one stage (upstream must exist)
+```
+
+### Backfill vs refresh
+
+The default is the **backfill** path: each raw payload is fetched once and
+cached, and re-runs reuse the cache. The **refresh** path (`--refresh`) re-fetches
+raw data to pick up new releases; QCEW re-fetches only its two most recent
+(revisable) years, and the strict-PIT series stay PIT-safe (ADR-0027):
+
+```bash
+uv run python -m cil.data.pipeline --refresh
+uv run python -m cil.orchestrate --refresh
+```
