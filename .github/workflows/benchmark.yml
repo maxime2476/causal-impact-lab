@@ -1,8 +1,10 @@
 name: benchmark
 
-# Scheduled estimator-suite run on a fixed snapshot to catch performance and
-# numerical regressions. Estimators arrive in later phases; for
-# now this verifies the environment builds and the (fast) test suite runs.
+# Scheduled estimator benchmark on a fixed synthetic snapshot (no network / real
+# data) to catch numerical and performance regressions: the headline panel-LP
+# estimators are run and their key outputs compared against a committed baseline
+# (benchmarks/baseline.json). Numerical drift fails the job; per-estimator
+# timings are printed for tracking.
 
 on:
   schedule:
@@ -26,5 +28,8 @@ jobs:
       - name: Sync environment (locked)
         run: uv sync --all-extras --frozen
 
-      - name: Run test suite (timed)
+      - name: Estimator benchmark (numerical + performance)
+        run: uv run python -m cil.benchmark
+
+      - name: Test suite (timings)
         run: uv run pytest --durations=25
