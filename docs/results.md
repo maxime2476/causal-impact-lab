@@ -102,7 +102,13 @@ ADR-0008):
   horizons (h=12: −0.002, 50% of specs negative; h=24: −0.004, 67% negative),
   versus a positive-leaning minority in the registered window; still 0% BH-
   significant.
-- **QCEW revision bound**: negligible (β ∈ [−0.021, −0.021]); **CES growth
+- **QCEW revision bound** (Tier 3.1): real state×industry vintages do not exist
+  (BLS archives none; ADR-0022), so a **benchmark-step** revision model — a
+  persistent per-cell/per-year level step calibrated to the QCEW-vs-CES growth
+  discrepancy (σ≈0.048) — bounds the coefficient. Under this conservative scale β
+  stays firmly negative, **[−0.025, −0.019]** around −0.021 (width 0.006), never
+  crossing zero. The old iid bound was ~9× tighter (0.0007) because independent
+  noise averages out — a falsely reassuring check now replaced. **CES growth
   correlation 0.92** validates the panel (Tier 0.3).
 
 **Net:** the power work (1994–2020, 3-digit) turns the headline from a
@@ -277,9 +283,23 @@ is significant in essentially none -- the relative effect is **not robust**.
 null (p = 0.17; placebo mean ~ 0); permuting exposure flags the (wrong-signed)
 estimate as somewhat extreme (p = 0.04). No evidence of a robust negative effect.
 
-**Structural breaks** (Bai-Perron on national employment growth): breaks around
-the WWII demobilization and, recently, 2019, **2020-05 (COVID)**, and 2021 -- the
-pandemic is the dominant recent break.
+**Randomization inference** (Tier 3.4): the iid shock permutation destroys the
+shock's serial dependence, so the valid design-based test **circularly shifts**
+the shock (preserving its autocovariance) and re-estimates. On the 3-digit panel
+the RI p-values are 0.06 (h=0, borderline), 0.65 (h=12) and 0.84 (h=24), and the
+**joint `max|β|` family-wise p-value is 0.78** — the sharp null is not rejected.
+The randomization distribution is centred on zero. The decision-horizon null thus
+survives a design-valid randomization test (ADR-0025).
+
+**Structural breaks** (full Bai-Perron on national employment growth, 1994-2020;
+Tier 3.2): exact dynamic-programming segmentation with **BIC selection chooses
+zero breaks** — the SSR reduction from adding breaks does not justify the extra
+parameters. There is no statistically warranted mean-regime shift over the study
+period; the relationship is stable. The 2020 COVID collapse-and-rebound is a
+*transient spike*, not a persistent break, and is handled by the state-dependent
+LP, not the break test (ADR-0023). The earlier PELT diagnostic, run on the full
+1939+ history at a fixed penalty, flagged penalty-dependent breaks; the principled
+BIC procedure on the study window supersedes it.
 
 **COVID / state-dependence** (Auerbach-Gorodnichenko aggregate LP): the
 **expansion-state** response is negative at the medium run (theta_12 = -3.0),
@@ -325,3 +345,11 @@ identification; the divergent categories are documented (ADR-0012).
   ADR-0018); a horizon-independent clean-control filter had been contaminating
   `h ≥ 1` under staggered adoption. It remains a robustness estimator, not the
   headline for a single national shock (no staggered timing); see ADR-0005.
+- **Full Goodman-Bacon decomposition** (Tier 3.3): on a staggered treatment
+  constructed from the exposure design (cells adopt when exposure-weighted
+  cumulative tightening crosses a threshold), the decomposition reproduces TWFE
+  exactly (identity gap 4e-14) and shows **~38% of the TWFE weight falls on
+  forbidden later-vs-already-treated comparisons**, which pull the estimate the
+  opposite way from the clean comparisons. A naive staggered TWFE would be
+  materially contaminated — quantifying why the headline uses the clean
+  LP/interaction and clean-control LP-DiD designs, which avoid it (ADR-0024).

@@ -16,6 +16,7 @@ import polars as pl
 
 from cil.config import Settings, get_settings
 from cil.data.store import Store
+from cil.estimators.goodman_bacon import bacon_decompose, build_staggered_treatment
 from cil.estimators.panel_lp import (
     PanelLPConfig,
     conley_cutoff_sensitivity,
@@ -113,6 +114,15 @@ def build_estimates(settings: Settings | None = None) -> dict[str, float]:
         )
         store.write_table("conley_cutoff_sensitivity", conley_sens)
 
+        # Full Goodman-Bacon decomposition on a constructed staggered treatment
+        # (cells adopt when exposure-weighted cumulative tightening crosses a
+        # threshold). The headline design is not a staggered DiD; this quantifies
+        # how much a naive TWFE on such a design would use forbidden comparisons.
+        staggered = build_staggered_treatment(panel, exposure, policy)
+        bacon_components, bacon = bacon_decompose(staggered)
+        store.write_table("bacon_decomposition", bacon_components)
+        store.write_table("bacon_summary", pl.DataFrame([bacon.model_dump()]))
+
         def _col(frame: pl.DataFrame, col: str, h: int) -> float:
             row = frame.filter(pl.col("horizon") == h)
             return float(row[col][0]) if row.height else float("nan")
@@ -138,6 +148,8 @@ def build_estimates(settings: Settings | None = None) -> dict[str, float]:
             ),
             "exposure_robust_any_significant": er_any_sig,
             "conley_any_significant": conley_any_sig,
+            "bacon_forbidden_weight": bacon.forbidden_weight,
+            "bacon_identity_gap": abs(bacon.twfe - bacon.twfe_implied),
         }
 
 

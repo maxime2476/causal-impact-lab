@@ -201,6 +201,34 @@ def test_lp_did_recovers_att_twfe_equivalence() -> None:
         assert abs(att - 0.5) < 0.1
 
 
+def test_bacon_decompose_reproduces_twfe() -> None:
+    from cil.estimators.goodman_bacon import bacon_decompose
+
+    rng = np.random.default_rng(0)
+    n_units, n_t = 160, 48
+    months = [dt.date(2000 + i // 12, i % 12 + 1, 1) for i in range(n_t)]
+    cohorts = rng.choice([1, 2, 3, -1], size=n_units)
+    unit_fe = rng.normal(0, 1, n_units)
+    time_fe = rng.normal(0, 0.2, n_t)
+    rows = []
+    for u in range(n_units):
+        ay = cohorts[u]
+        for ti, mo in enumerate(months):
+            treated = 1 if (ay >= 0 and ti // 12 >= ay) else 0
+            y = unit_fe[u] + time_fe[ti] - 0.5 * treated + rng.normal(0, 0.1)
+            rows.append((f"u{u}", mo, y, treated))
+    panel = pl.DataFrame(
+        rows, schema=["unit_id", "date", "log_employment", "treated"], orient="row"
+    )
+    comp, summ = bacon_decompose(panel)
+    # The weighted sum of 2x2 estimates reproduces the TWFE coefficient exactly,
+    # weights sum to one, and no estimate is degenerate.
+    assert abs(summ.twfe - summ.twfe_implied) < 1e-8
+    assert abs(float(comp["weight"].sum()) - 1.0) < 1e-9
+    assert not bool(comp["estimate"].is_nan().any())
+    assert 0.0 <= summ.forbidden_weight <= 1.0
+
+
 def test_bacon_diagnostic_small_gap_on_clean_design() -> None:
     df = _staggered_panel(theta=0.5)
     bacon = bacon_diagnostic(df)
