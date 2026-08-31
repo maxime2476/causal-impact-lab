@@ -29,6 +29,18 @@ _PASS_THROUGH = {
     "dml_results": "dml_results.csv",
     "exposure_sigma": "exposure_sigma.csv",
     "state_dependent_irf": "state_dependent_irf.csv",
+    # Tier 1-4 additions.
+    "lpiv_irf_brw": "aggregate_lpiv_brw.csv",
+    "rr_lp_irf": "narrative_lp_irf.csv",
+    "panel_lp_exposure_robust": "headline_exposure_robust.csv",
+    "panel_lp_conley": "headline_conley.csv",
+    "conley_cutoff_sensitivity": "conley_sensitivity.csv",
+    "bayes_cell_summary": "bayes_cell_summary.csv",
+    "bacon_summary": "bacon_summary.csv",
+    "randomization_inference": "randomization_inference.csv",
+    "break_selection": "break_selection.csv",
+    "qcew_revision_bound_correlated": "revision_bound.csv",
+    "shock_diagnostics": "shock_diagnostics.csv",
 }
 
 
