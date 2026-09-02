@@ -125,6 +125,15 @@ independent labour-market outcome reproduces the correctly-signed, not-significa
 null — consistent with contractionary shocks depressing exposed-industry wages,
 imprecisely.
 
+**Shock asymmetry (Tier 6.2).** Splitting the interacted-LP treatment by the
+shock's **sign** (tightening vs easing) and **size** (large vs small |s|) and
+estimating both coefficients jointly (`asymmetry_sign`, `asymmetry_size`,
+ADR-0031) finds **no robust asymmetry**. The pooled negative effect leans toward
+*easing* (h=12 easing −0.11 vs tightening ≈ 0), and a large-vs-small difference is
+marginal at h=0, but neither survives BH-FDR (BH p ≈ 0.13 and 0.06); the size
+signal is driven by the noisy small-shock coefficient. The headline's single-β
+linearity is not rejected.
+
 ## Headline relative effect (Phase 4, preliminary; pre-registered benchmark)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline

@@ -91,6 +91,49 @@ def test_run_panel_lp_custom_outcome_col() -> None:
     assert abs(res.filter(pl.col("horizon") == 0)["beta"][0] - beta_true) < 0.1
 
 
+def test_panel_lp_asymmetry_recovers_sign_split() -> None:
+    from cil.estimators.asymmetry import run_panel_lp_asymmetry
+
+    rng = np.random.default_rng(0)
+    states = [f"{s:02d}" for s in range(1, 26)]
+    sectors = [f"10{k}" for k in range(11, 22)]
+    months = _months(72)
+    expo = dict(zip(sectors, np.linspace(-1.5, 1.5, 11), strict=True))
+    s_t = {m: rng.normal() for m in months}
+    beta_pos, beta_neg = -0.9, -0.2  # asymmetric response
+    rows = []
+    for st in states:
+        for k in sectors:
+            level = 0.0
+            for m in months:
+                b = beta_pos if s_t[m] > 0 else beta_neg
+                level += b * expo[k] * s_t[m] + rng.normal(0, 0.2)
+                rows.append((f"{st}_{k}", st, k, m, level))
+    panel = pl.DataFrame(
+        rows,
+        schema=["unit_id", "state_fips", "supersector_code", "date", "log_employment"],
+        orient="row",
+    )
+    exposure = pl.DataFrame(
+        {"supersector_code": list(expo), "exposure": list(expo.values())}
+    )
+    shock = pl.DataFrame({"date": months, "shock": [s_t[m] for m in months]})
+    res = run_panel_lp_asymmetry(
+        panel,
+        exposure,
+        shock,
+        PanelLPConfig(horizons=(0,)),
+        shock_col="shock",
+        split="sign",
+    )
+    row = res.filter(pl.col("horizon") == 0)
+    assert row["label_a"][0] == "tightening" and row["label_b"][0] == "easing"
+    assert abs(float(row["beta_a"][0]) - beta_pos) < 0.1
+    assert abs(float(row["beta_b"][0]) - beta_neg) < 0.1
+    # The asymmetry is detected.
+    assert float(row["p_diff"][0]) < 0.05
+
+
 def test_conley_kernel_decays_with_distance() -> None:
     from cil.inference.conley import spatial_kernel
 

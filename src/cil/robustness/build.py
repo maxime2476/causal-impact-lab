@@ -16,6 +16,8 @@ import polars as pl
 
 from cil.config import Settings, get_settings
 from cil.data.store import Store
+from cil.estimators.asymmetry import run_panel_lp_asymmetry
+from cil.estimators.panel_lp import PanelLPConfig
 from cil.exposure import shift_share as ss
 from cil.robustness import breaks, covid, placebo, qcew_revision
 from cil.robustness import specification_curve as sc
@@ -94,6 +96,31 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
             seed=settings.inference.seed,
         )
         store.write_table("randomization_inference", ri_frame)
+
+        # Shock asymmetry: does the relative effect differ by the shock's sign
+        # (tightening vs easing) or size (large vs small)?
+        asym_config = PanelLPConfig(
+            horizons=(0, 6, 12, 24),
+            confidence_level=settings.inference.confidence_level,
+        )
+        asym_sign = run_panel_lp_asymmetry(
+            panel,
+            exposures["estimated"],
+            brw_shock,
+            asym_config,
+            shock_col="shock",
+            split="sign",
+        )
+        asym_size = run_panel_lp_asymmetry(
+            panel,
+            exposures["estimated"],
+            brw_shock,
+            asym_config,
+            shock_col="shock",
+            split="size",
+        )
+        store.write_table("asymmetry_sign", asym_sign)
+        store.write_table("asymmetry_size", asym_size)
 
         # Bai-Perron breaks on national employment growth, over the analysis
         # window (breaks within the study period are the relevant diagnostic).
@@ -182,6 +209,12 @@ def build_robustness(settings: Settings | None = None) -> dict[str, float]:
             "ri_joint_p_value": ri_joint_p,
             "ri_p_value_h12": float(
                 ri_frame.filter(pl.col("horizon") == 12)["ri_p_value"][0]
+            ),
+            "asym_sign_p_diff_h12": float(
+                asym_sign.filter(pl.col("horizon") == 12)["p_diff"][0]
+            ),
+            "asym_size_p_diff_h12": float(
+                asym_size.filter(pl.col("horizon") == 12)["p_diff"][0]
             ),
         }
 
