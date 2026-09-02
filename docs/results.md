@@ -218,7 +218,16 @@ right-signed but insignificant); the disagreement is the point — the aggregate
 assumption-dependent, and the cleanly-identified relative design stays the
 headline.
 
-**Tier 1.3 update — high-frequency information effect.** The Jarocinski-Karadi
+**Tier 6.3 update — sign-restricted SVAR.** A third, structurally different
+aggregate identification is a monetary VAR (policy rate, log CPI, log employment,
+log IP) identified by **sign restrictions** — rate up, prices down over 0–5
+months, employment left unrestricted (`sign_svar_irf`, ADR-0032). The identified
+employment response is **essentially indeterminate**: the median is near zero
+(slightly positive at the medium run) and the **68% band includes zero at every
+horizon** (h=12: [−0.51, +0.67]). All three aggregate identifications — HF
+instrument (wrong-signed), narrative (right-signed, imprecise), and sign-restricted
+SVAR (indeterminate) — decline to pin down the aggregate response, a strong honest
+statement that the aggregate is the assumption-dependent complement.
 test, run on the true announcement window (`mps_fomc` rate vs same-window S&P 500)
 rather than a monthly proxy, finds **32.5% of FOMC surprises are information-type**
 (105 / 323 events) — versus 52% for the monthly proxy of the same series, which is
