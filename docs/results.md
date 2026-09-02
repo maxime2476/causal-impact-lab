@@ -134,6 +134,15 @@ marginal at h=0, but neither survives BH-FDR (BH p ≈ 0.13 and 0.06); the size
 signal is driven by the noisy small-shock coefficient. The headline's single-β
 linearity is not rejected.
 
+**Third outcome — state unemployment (Tier 6.4).** The relative design at the
+*state* level (state Bartik exposure × shock; `unemployment_panel_lp_results`,
+ADR-0033) gives a **noisier, more mixed** null: the effect is **correctly signed
+on impact** (unemployment rises more in exposed states, h=0 +0.32, through ~h=3)
+but the coefficient **turns negative at the medium run** (h=12 −0.39; only 7/25
+horizons positive), with clean leads and **0 horizons BH-significant**. A third
+labour-market outcome, at a coarser level of aggregation, is again insignificant —
+neither strengthening nor contradicting the headline.
+
 ## Headline relative effect (Phase 4, preliminary; pre-registered benchmark)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline

@@ -36,6 +36,7 @@ from cil.data import (
     qcew,
     qcew_bulk,
     rr,
+    state_unemp,
     wuxia,
 )
 from cil.data.provenance import cache_raw, load_provenance
@@ -364,6 +365,40 @@ def ingest_ces(
     return ces.height
 
 
+def ingest_state_unemployment(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
+    """Ingest state unemployment rates (LAUS via FRED); return the row count."""
+    if settings.fred_api_key is None:
+        msg = "CIL_FRED_API_KEY is required for state-unemployment ingestion."
+        raise ValueError(msg)
+    api_key = settings.fred_api_key
+    frames: list[pl.DataFrame] = []
+    for state_fips, abbr in ces_sae.STATE_FIPS_ABBR.items():
+        content = _cache_or_fetch(
+            store,
+            settings.paths.data_dir,
+            "state_unemp",
+            f"{abbr}UR.json",
+            functools.partial(
+                state_unemp.fetch_raw_state,
+                client,
+                settings.data.urls.fred_base,
+                api_key,
+                abbr,
+            ),
+            force_refresh=force_refresh,
+        )
+        frames.append(state_unemp.parse_state(content, state_fips))
+    unemp = pl.concat(frames).sort(["state_fips", "date"])
+    store.write_table("state_unemployment", unemp)
+    return unemp.height
+
+
 def build_panels(settings: Settings, store: Store) -> tuple[int, int]:
     """Assemble the analysis-ready cell panel from stored QCEW cells.
 
@@ -416,6 +451,9 @@ def run(
             summary["mps_rows"] = ingest_mps(settings, store, client, force_refresh=fr)
             summary["rr_rows"] = ingest_rr(settings, store, client, force_refresh=fr)
             summary["ces_rows"] = ingest_ces(settings, store, client, force_refresh=fr)
+            summary["state_unemp_rows"] = ingest_state_unemployment(
+                settings, store, client, force_refresh=fr
+            )
             summary["qcew_cells"] = ingest_qcew(
                 settings, store, client, force_refresh=fr
             )
