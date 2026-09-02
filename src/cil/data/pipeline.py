@@ -198,6 +198,49 @@ def ingest_qcew(
     return cells.height
 
 
+def ingest_qcew_wages(
+    settings: Settings,
+    store: Store,
+    client: httpx.Client,
+    *,
+    force_refresh: bool = False,
+) -> int:
+    """Ingest quarterly QCEW average weekly wages from the same cached zips."""
+    qcfg = settings.data.qcew
+    start_year = max(qcfg.bulk_min_year, settings.data.sample.start.year)
+    end_year = settings.data.sample.end.year
+    frames: list[pl.DataFrame] = []
+    for year in range(start_year, end_year + 1):
+        content = _cache_or_fetch(
+            store,
+            settings.paths.data_dir,
+            "qcew_bulk",
+            f"{year}.zip",
+            functools.partial(
+                qcew_bulk.fetch_raw_year,
+                client,
+                settings.data.urls.qcew_bulk_template,
+                year,
+            ),
+            force_refresh=force_refresh and year >= end_year - 1,
+        )
+        frames.append(
+            qcew_bulk.parse_year_wages(
+                content, year, aggregation_level=qcfg.aggregation_level
+            )
+        )
+    wages = (
+        pl.concat(frames)
+        .filter(
+            (pl.col("date") >= settings.data.sample.start)
+            & (pl.col("date") <= settings.data.sample.end)
+        )
+        .sort(["state_fips", "supersector_code", "date"])
+    )
+    store.write_table("qcew_wages", wages)
+    return wages.height
+
+
 def ingest_wuxia(
     settings: Settings,
     store: Store,
@@ -374,6 +417,9 @@ def run(
             summary["rr_rows"] = ingest_rr(settings, store, client, force_refresh=fr)
             summary["ces_rows"] = ingest_ces(settings, store, client, force_refresh=fr)
             summary["qcew_cells"] = ingest_qcew(
+                settings, store, client, force_refresh=fr
+            )
+            summary["qcew_wage_rows"] = ingest_qcew_wages(
                 settings, store, client, force_refresh=fr
             )
             n_panel, n_dropped = build_panels(settings, store)

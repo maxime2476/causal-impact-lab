@@ -139,3 +139,79 @@ def parse_year(content: bytes, year: int, *, aggregation_level: int) -> pl.DataF
         )
         .sort(["state_fips", "supersector_code", "date"])
     )
+
+
+def parse_year_wages(
+    content: bytes, year: int, *, aggregation_level: int
+) -> pl.DataFrame:
+    """Parse a year's bulk zip into **quarterly** state-industry average wages.
+
+    QCEW reports total quarterly wages and a quarter's average monthly employment.
+    The industry-level average weekly wage (across ownership) is the
+    employment-weighted aggregate ``sum(total_qtrly_wages) / (sum(mean employment)
+    * 13)``. Unlike employment (monthly), wages are quarterly.
+
+    Returns
+    -------
+    polars.DataFrame
+        Columns ``state_fips``, ``supersector_code``, ``date`` (quarter start),
+        ``avg_weekly_wage``.
+    """
+    archive = zipfile.ZipFile(io.BytesIO(content))
+    frames: list[pl.DataFrame] = []
+    for name in archive.namelist():
+        if not _STATE_FILE.search(name):
+            continue
+        raw = pl.read_csv(
+            io.BytesIO(archive.read(name)),
+            infer_schema_length=10000,
+            schema_overrides={"area_fips": pl.Utf8, "industry_code": pl.Utf8},
+        )
+        rows = (
+            raw.filter(
+                (pl.col("agglvl_code") == aggregation_level)
+                & (pl.col("own_code").is_in(_OWNERSHIP_CODES))
+            )
+            .with_columns(state_fips=pl.col("area_fips").str.slice(0, 2))
+            .filter(pl.col("state_fips").cast(pl.Int32) <= _MAX_STATE_FIPS)
+            .select(
+                "state_fips",
+                supersector_code=pl.col("industry_code"),
+                qtr=pl.col("qtr"),
+                total_wages=pl.col("total_qtrly_wages").cast(pl.Float64),
+                mean_emp=(
+                    pl.col("month1_emplvl").cast(pl.Float64)
+                    + pl.col("month2_emplvl").cast(pl.Float64)
+                    + pl.col("month3_emplvl").cast(pl.Float64)
+                )
+                / 3.0,
+            )
+        )
+        if rows.height:
+            frames.append(rows)
+    if not frames:
+        return pl.DataFrame(
+            schema={
+                "state_fips": pl.Utf8,
+                "supersector_code": pl.Utf8,
+                "date": pl.Date,
+                "avg_weekly_wage": pl.Float64,
+            }
+        )
+    combined = pl.concat(frames).filter(
+        ~pl.col("supersector_code").is_in(_UNCLASSIFIED)
+    )
+    return (
+        combined.group_by(["state_fips", "supersector_code", "qtr"])
+        .agg(
+            total_wages=pl.col("total_wages").sum(),
+            mean_emp=pl.col("mean_emp").sum(),
+        )
+        .filter(pl.col("mean_emp") > 0)
+        .with_columns(
+            date=pl.date(year, (pl.col("qtr") - 1) * 3 + 1, 1),
+            avg_weekly_wage=pl.col("total_wages") / (pl.col("mean_emp") * 13.0),
+        )
+        .select("state_fips", "supersector_code", "date", "avg_weekly_wage")
+        .sort(["state_fips", "supersector_code", "date"])
+    )

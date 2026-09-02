@@ -55,6 +55,42 @@ def test_panel_lp_recovers_injected_beta() -> None:
     assert abs(beta0 - beta_true) < 0.1
 
 
+def test_run_panel_lp_custom_outcome_col() -> None:
+    # The estimator recovers the injected effect on an arbitrarily-named outcome.
+    rng = np.random.default_rng(0)
+    states = [f"{s:02d}" for s in range(1, 21)]
+    sectors = [f"10{k}" for k in range(11, 22)]
+    months = _months(48)
+    expo = dict(zip(sectors, np.linspace(-1.5, 1.5, 11), strict=True))
+    s_t = {m: rng.normal() for m in months}
+    beta_true = -0.7
+    rows = []
+    for st in states:
+        for k in sectors:
+            level = 0.0
+            for m in months:
+                level += beta_true * expo[k] * s_t[m] + rng.normal(0, 0.2)
+                rows.append((f"{st}_{k}", st, k, m, level))
+    panel = pl.DataFrame(
+        rows,
+        schema=["unit_id", "state_fips", "supersector_code", "date", "log_wage"],
+        orient="row",
+    )
+    exposure = pl.DataFrame(
+        {"supersector_code": list(expo), "exposure": list(expo.values())}
+    )
+    shock = pl.DataFrame({"date": months, "shock": [s_t[m] for m in months]})
+    res = run_panel_lp(
+        panel,
+        exposure,
+        shock,
+        PanelLPConfig(horizons=(0, 1)),
+        shock_col="shock",
+        outcome_col="log_wage",
+    )
+    assert abs(res.filter(pl.col("horizon") == 0)["beta"][0] - beta_true) < 0.1
+
+
 def test_conley_kernel_decays_with_distance() -> None:
     from cil.inference.conley import spatial_kernel
 

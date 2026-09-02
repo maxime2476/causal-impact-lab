@@ -116,6 +116,15 @@ wrong-signed, pre-trend-flagged result into a **correctly-signed, clean-pre-tren
 cross-estimator-consistent null** — a materially more credible finding, still
 short of conventional significance on this sample.
 
+**Second outcome — wages (Tier 6.1).** The same interacted panel LP applied to
+log QCEW average weekly wage (`wage_panel_lp_results`; quarterly, 4,454 cells)
+gives the *same* pattern: the relative wage effect is **negative at all 9 response
+horizons** (β from −0.024 on impact to −0.007 at 8 quarters), event-study leads
+clean (max |t| 0.49), and **0 horizons BH-significant** (ADR-0030). A second,
+independent labour-market outcome reproduces the correctly-signed, not-significant
+null — consistent with contractionary shocks depressing exposed-industry wages,
+imprecisely.
+
 ## Headline relative effect (Phase 4, preliminary; pre-registered benchmark)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline

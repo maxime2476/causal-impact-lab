@@ -64,6 +64,7 @@ def _prepare(
     shock: pl.DataFrame,
     shock_col: str,
     n_control_lags: int,
+    outcome_col: str = "log_employment",
 ) -> pl.DataFrame:
     """Attach exposure, shock, the treatment interaction, and control lags."""
     base = (
@@ -73,7 +74,7 @@ def _prepare(
         .with_columns(treatment=pl.col("exposure") * pl.col(shock_col))
     )
     control_exprs = [
-        (pl.col("log_employment").shift(lag) - pl.col("log_employment").shift(lag + 1))
+        (pl.col(outcome_col).shift(lag) - pl.col(outcome_col).shift(lag + 1))
         .over("unit_id")
         .alias(f"dy_l{lag}")
         for lag in range(1, n_control_lags + 1)
@@ -88,6 +89,7 @@ def _fit_horizon(
     confidence_level: float,
     *,
     cluster_col: str | None = None,
+    outcome_col: str = "log_employment",
 ) -> dict[str, float]:
     """Estimate one horizon and return its coefficient row.
 
@@ -101,9 +103,9 @@ def _fit_horizon(
     sector clustering would ignore that within-time correlation and badly
     understate the standard errors (see ADR-0017).
     """
-    outcome = (
-        pl.col("log_employment").shift(-horizon) - pl.col("log_employment").shift(1)
-    ).over("unit_id")
+    outcome = (pl.col(outcome_col).shift(-horizon) - pl.col(outcome_col).shift(1)).over(
+        "unit_id"
+    )
     keep = ["unit_id", "date", "outcome", TREATMENT, *controls]
     if cluster_col is not None and cluster_col not in keep:
         keep.append(cluster_col)
@@ -140,6 +142,7 @@ def run_panel_lp(
     config: PanelLPConfig,
     *,
     shock_col: str,
+    outcome_col: str = "log_employment",
 ) -> pl.DataFrame:
     """Estimate the interacted panel LP across horizons.
 
@@ -165,13 +168,21 @@ def run_panel_lp(
         across response horizons ``h >= 0``).
     """
     controls = [f"dy_l{lag}" for lag in range(1, config.n_control_lags + 1)]
-    prepared = _prepare(panel, exposure, shock, shock_col, config.n_control_lags)
+    prepared = _prepare(
+        panel, exposure, shock, shock_col, config.n_control_lags, outcome_col
+    )
     rows = [
         # Horizon -1 is the event-study reference (outcome y_{t-1}-y_{t-1} == 0)
         # and is omitted. Pre-trend leads use fixed effects only: a lead outcome
         # is mechanically collinear with the lagged-difference controls, so
         # including them is degenerate. Response horizons keep the controls.
-        _fit_horizon(prepared, h, controls if h >= 0 else [], config.confidence_level)
+        _fit_horizon(
+            prepared,
+            h,
+            controls if h >= 0 else [],
+            config.confidence_level,
+            outcome_col=outcome_col,
+        )
         for h in config.horizons
         if h != -1
     ]
