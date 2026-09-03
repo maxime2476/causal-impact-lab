@@ -14,6 +14,7 @@ project are computed on real data; synthetic data appears only in tests.
 | Policy rate (`FEDFUNDS`) + Wu-Xia shadow rate | FRED + Atlanta Fed | API + `.xlsx` | monthly | as-published; spliced |
 | State × supersector employment | BLS QCEW | open-data API (CSV) | monthly | **revised (final)**, documented |
 | State employment cross-check | BLS CES-SAE via FRED (`{ABBR}NA`) | API (key) | monthly (SA) | as-published |
+| State unemployment rate (outcome) | BLS LAUS via FRED (`{ABBR}UR`) | API (key) | monthly (SA) | as-published |
 | Published shock benchmark | Bu-Rogers-Wu | author CSV | monthly / per-FOMC | as-published |
 | HF monetary surprise (headline instrument) | Bauer-Swanson MPS (SF Fed) | `.xlsx` | monthly / per-FOMC | as-published |
 | Narrative monetary shock | Romer-Romer, Breitenlechner (2018) update | `.dta` | quarterly (1969-2012) | as-published |

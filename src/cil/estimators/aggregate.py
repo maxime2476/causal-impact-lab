@@ -17,6 +17,7 @@ import polars as pl
 from cil.config import Settings, get_settings
 from cil.data.store import Store
 from cil.estimators.proxy_svar import LPIVConfig, lp_iv
+from cil.estimators.sign_svar import sign_restricted_svar
 from cil.estimators.ts_lp import TimeSeriesLPConfig, time_series_lp
 
 _SHOCK_COL = "shock"
@@ -79,6 +80,68 @@ def build_narrative_shock_irf(settings: Settings | None = None) -> dict[str, flo
             "rr_lp_theta_h4": _at(irf, "theta", 4),
             "rr_lp_theta_h8": _at(irf, "theta", 8),
             "rr_lp_n_obs_h8": _at(irf, "n_obs", 8),
+        }
+
+
+def build_sign_svar_irf(settings: Settings | None = None) -> dict[str, float]:
+    """Build and store the sign-restricted SVAR employment IRF. Return a summary.
+
+    A monetary VAR (policy rate, log CPI, log employment, log industrial
+    production) is identified by sign restrictions - the rate rises and prices
+    fall over 0-5 months - with employment left unrestricted. A third
+    assumption-dependent aggregate complement.
+    """
+    settings = settings or get_settings()
+    series = settings.data.series
+    with Store(settings.paths.store_path) as store:
+        macro = store.read_table("macro_current")
+        policy = store.read_table("policy_rate")
+
+        def _log_series(series_id: str, name: str) -> pl.DataFrame:
+            return (
+                macro.filter(pl.col("series_id") == series_id)
+                .select("reference_date", **{name: pl.col("value").log()})
+                .rename({"reference_date": "date"})
+            )
+
+        data = (
+            policy.select("date", rate="policy_rate")
+            .join(_log_series(series.cpi, "log_cpi"), on="date", how="inner")
+            .join(
+                _log_series(series.national_employment, "log_emp"),
+                on="date",
+                how="inner",
+            )
+            .join(
+                _log_series(series.industrial_production, "log_ip"),
+                on="date",
+                how="inner",
+            )
+            .filter(
+                (pl.col("date") >= settings.data.sample.start)
+                & (pl.col("date") <= settings.data.sample.end)
+            )
+            .drop_nulls()
+            .sort("date")
+        )
+        irf, acceptance = sign_restricted_svar(
+            data,
+            ["rate", "log_cpi", "log_emp", "log_ip"],
+            rate="rate",
+            price="log_cpi",
+            target="log_emp",
+            seed=settings.inference.seed,
+        )
+        store.write_table("sign_svar_irf", irf)
+
+        def _med(h: int) -> float:
+            row = irf.filter(pl.col("horizon") == h)
+            return float(row["median"][0]) if row.height else float("nan")
+
+        return {
+            "sign_svar_acceptance_rate": acceptance,
+            "sign_svar_emp_h12": _med(12),
+            "sign_svar_emp_h24": _med(24),
         }
 
 
@@ -150,7 +213,11 @@ def build_aggregate_irf(settings: Settings | None = None) -> dict[str, float]:
 
 def main() -> None:
     """Build the aggregate IRFs and print the summary (module entry point)."""
-    summary = {**build_aggregate_irf(), **build_narrative_shock_irf()}
+    summary = {
+        **build_aggregate_irf(),
+        **build_narrative_shock_irf(),
+        **build_sign_svar_irf(),
+    }
     for key, value in summary.items():
         print(f"{key}: {value:.4f}")
 

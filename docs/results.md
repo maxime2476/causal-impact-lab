@@ -116,6 +116,33 @@ wrong-signed, pre-trend-flagged result into a **correctly-signed, clean-pre-tren
 cross-estimator-consistent null** — a materially more credible finding, still
 short of conventional significance on this sample.
 
+**Second outcome — wages (Tier 6.1).** The same interacted panel LP applied to
+log QCEW average weekly wage (`wage_panel_lp_results`; quarterly, 4,454 cells)
+gives the *same* pattern: the relative wage effect is **negative at all 9 response
+horizons** (β from −0.024 on impact to −0.007 at 8 quarters), event-study leads
+clean (max |t| 0.49), and **0 horizons BH-significant** (ADR-0030). A second,
+independent labour-market outcome reproduces the correctly-signed, not-significant
+null — consistent with contractionary shocks depressing exposed-industry wages,
+imprecisely.
+
+**Shock asymmetry (Tier 6.2).** Splitting the interacted-LP treatment by the
+shock's **sign** (tightening vs easing) and **size** (large vs small |s|) and
+estimating both coefficients jointly (`asymmetry_sign`, `asymmetry_size`,
+ADR-0031) finds **no robust asymmetry**. The pooled negative effect leans toward
+*easing* (h=12 easing −0.11 vs tightening ≈ 0), and a large-vs-small difference is
+marginal at h=0, but neither survives BH-FDR (BH p ≈ 0.13 and 0.06); the size
+signal is driven by the noisy small-shock coefficient. The headline's single-β
+linearity is not rejected.
+
+**Third outcome — state unemployment (Tier 6.4).** The relative design at the
+*state* level (state Bartik exposure × shock; `unemployment_panel_lp_results`,
+ADR-0033) gives a **noisier, more mixed** null: the effect is **correctly signed
+on impact** (unemployment rises more in exposed states, h=0 +0.32, through ~h=3)
+but the coefficient **turns negative at the medium run** (h=12 −0.39; only 7/25
+horizons positive), with clean leads and **0 horizons BH-significant**. A third
+labour-market outcome, at a coarser level of aggregation, is again insignificant —
+neither strengthening nor contradicting the headline.
+
 ## Headline relative effect (Phase 4, preliminary; pre-registered benchmark)
 
 The interacted panel local projection (unit + time fixed effects, BRW headline
@@ -200,7 +227,16 @@ right-signed but insignificant); the disagreement is the point — the aggregate
 assumption-dependent, and the cleanly-identified relative design stays the
 headline.
 
-**Tier 1.3 update — high-frequency information effect.** The Jarocinski-Karadi
+**Tier 6.3 update — sign-restricted SVAR.** A third, structurally different
+aggregate identification is a monetary VAR (policy rate, log CPI, log employment,
+log IP) identified by **sign restrictions** — rate up, prices down over 0–5
+months, employment left unrestricted (`sign_svar_irf`, ADR-0032). The identified
+employment response is **essentially indeterminate**: the median is near zero
+(slightly positive at the medium run) and the **68% band includes zero at every
+horizon** (h=12: [−0.51, +0.67]). All three aggregate identifications — HF
+instrument (wrong-signed), narrative (right-signed, imprecise), and sign-restricted
+SVAR (indeterminate) — decline to pin down the aggregate response, a strong honest
+statement that the aggregate is the assumption-dependent complement.
 test, run on the true announcement window (`mps_fomc` rate vs same-window S&P 500)
 rather than a monthly proxy, finds **32.5% of FOMC surprises are information-type**
 (105 / 323 events) — versus 52% for the monthly proxy of the same series, which is
